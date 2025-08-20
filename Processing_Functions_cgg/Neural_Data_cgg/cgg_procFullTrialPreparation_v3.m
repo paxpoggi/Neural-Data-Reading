@@ -144,7 +144,7 @@ SamplingFrequency=mode(SF_Data);
 
 %% Get the trial variables
 
-[trialVariables] = cgg_getTrialVariables('inputfolder',inputfolder,'outdatadir',outdatadir);
+[trialVariables] = cgg_getTrialVariables('inputfolder',inputfolder,'outdatadir',outdatadir,'monkey_name',monkey_name);
 
 %% Select the data that is not aborted or too long
 

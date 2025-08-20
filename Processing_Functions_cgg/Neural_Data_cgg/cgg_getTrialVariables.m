@@ -33,17 +33,33 @@ outdatadir=cfg.outdatadir;
 
 TrialVariables_file_name=[cfg_v2.outdatadir.Experiment.Session.Trial_Information.path filesep 'TrialVariables_', cfg.SessionName, '.mat'];
 
-%%
 if ~(exist(TrialVariables_file_name,'file')) 
 
-Session_struct = dir(fullfile(inputfolder,'Session*'));
-USE_Session_Name = Session_struct.name;
-
-if length(Session_struct)>1
-    disp(['!!! Please make sure there is only one USE session in the '...
-    'recording folder']);
-    disp('!!! The wrong session may be used to identify trial variables');
-end
+    %% add in cases for woton and frey vs Igor
+    switch monkey_name
+        case {'Wotan','Frey'}
+            
+            Session_struct = dir(fullfile(inputfolder,'Session*'));
+            USE_Session_Name = Session_struct.name;
+        
+            if length(Session_struct)>1
+                disp(['!!! Please make sure there is only one USE session in the '...
+                'recording folder']);
+                disp('!!! The wrong session may be used to identify trial variables');
+            end
+        
+        case 'Igor'
+            [~, SessionName]=fileparts(inputfolder);
+            Session_struct = dir(fullfile(inputfolder, '*_BHV'));
+            USE_Session_Name = [SessionName '_BHV'];
+            if length(Session_struct)>1
+                            disp(['!!! Please make sure there is only one USE session in the '...
+                            'recording folder']);
+                            disp('!!! The wrong session may be used to identify trial variables');
+            end
+        otherwise
+            warning('Unknown monkey name: %s.', monkey_name)
+    end
 
 [Path_Experiment,Session_Name,~]=fileparts(inputfolder);
 
