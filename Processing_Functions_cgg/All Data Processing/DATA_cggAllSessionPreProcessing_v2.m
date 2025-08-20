@@ -10,8 +10,9 @@ for sidx=1:length(cfg)
     
     inputfolder=cfg(sidx).inputfolder;
     outdatadir=cfg(sidx).outdatadir;
+    monkey_name=cfg(sidx).Monkey_name;
 
 [Output,Area_Names] = cgg_proc_NeuralDataPreparation(...
-    'inputfolder',cfg(sidx).inputfolder,'outdatadir',cfg(sidx).outdatadir);
+    'inputfolder',cfg(sidx).inputfolder,'outdatadir',cfg(sidx).outdatadir,'monkey_name',monkey_name);
 
 end

@@ -1,4 +1,4 @@
-function [Connected_Channels,Disconnected_Channels,is_previously_rereferenced,Debugging_Info] = cgg_getDisconnectedChannels_v3(Trial_Numbers,Count_Sel_Trial,fullfilename)
+function [Connected_Channels,Disconnected_Channels,is_previously_rereferenced,Debugging_Info] = cgg_getDisconnectedChannels_v3(Trial_Numbers,Count_Sel_Trial,fullfilename,monkey_name)
 %UNTITLED2 Summary of this function goes here
 %   Detailed explanation goes here
 
@@ -71,7 +71,7 @@ InData_LFP=cell2mat(InData_LFP);
 InData={InData_LFP,InData_WB};
 
 %%
-cfg_disconnected = PARAMETERS_cgg_getDisconnectedChannels;
+cfg_disconnected = PARAMETERS_cgg_getDisconnectedChannels(monkey_name);
 
 Start_Group=cfg_disconnected.Start_Group;
 End_Group=cfg_disconnected.End_Group;
