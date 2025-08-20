@@ -27,6 +27,7 @@ function [ maplabelsraw, maplabelscooked, recordedlabels ] = ...
 % Initialize.
 maplabelsraw = {};
 maplabelscooked = {};
+recordedlabels = {}; 
 
 
 % Try to fetch the channel mapping and the Open Ephys dataset's header.
@@ -44,7 +45,6 @@ chanmap = cgg_euUtil_getOpenEphysChannelMap_v5(mapdir);
 if isok && (~isempty(chanmap))
   oenative = datameta.folders.datafolder.nativeorder;
   nativelabels = {};
-  recordedlabels = {};
 
 %   for lidx = 1:length(oenative)
 %     nativelabels{lidx} = ...
