@@ -49,6 +49,13 @@ switch Root_Directory
         % Folder where you would like all of the processing to go
         temporaryfolder_base='/Volumes/gerritcg''s home';   
         % Folder where any temporary files should go
+            case 'paxpoggi'
+        inputfolder_base='/Volumes/Womelsdorf Lab'; 
+        % Folder where 'Data_neural' is accessed from your computer
+        outputfolder_base='/Volumes/Extreme SSD/Womelsdorf/Preprocessed Data';
+        % folder where the processing output goes
+        temporaryfolder_base='/Volumes/Extreme SSD/Womelsdorf/Preprocessed Data';
+        % temporary files
         end
     case "data"
         Current_System="TEBA";
