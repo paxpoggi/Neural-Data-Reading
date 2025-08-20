@@ -11,7 +11,9 @@ Contents_Activity=dir(cfg.outdatadir_Activity);
 % remove all files (isdir property is 0)
 Contents_Activity=Contents_Activity([Contents_Activity(:).isdir]);
 % remove '.' and '..'
-Contents_Activity = Contents_Activity(~ismember({Contents_Activity(:).name},{'.','..'}));
+Contents_Activity = Contents_Activity(~ismember({Contents_Activity(:).name},{'.','..',}));
+% remove folders that start with '._'
+Contents_Activity = Contents_Activity(~startsWith({Contents_Activity.name}, '._'));
 
 outdatadir_EX_Area=[cfg.outdatadir_Activity, filesep, Contents_Activity(1).name];
 
@@ -21,7 +23,6 @@ Contents_EX_Area = dir(outdatadir_EX_Area);
 Contents_EX_Area = Contents_EX_Area([Contents_EX_Area(:).isdir]);
 % remove '.' and '..' and the 'Connected' Folder
 Contents_EX_Area = Contents_EX_Area(~ismember({Contents_EX_Area(:).name},{'.','..','Connected'}));
-
 %%
 NumTypesActivity=length(Contents_EX_Area);
 
@@ -61,8 +62,9 @@ for aidx=1:NumTypesActivity
 Contents_EX_Area_Type = dir(outdatadir_EX_Area_Type{aidx});
 % remove all files (isdir property is 0)
 Contents_EX_Area_Type = Contents_EX_Area_Type(~([Contents_EX_Area_Type(:).isdir]));
-% remove '.' and '..' 
-Contents_EX_Area_Type = Contents_EX_Area_Type(~ismember({Contents_EX_Area_Type(:).name},{'.','..'}));
+% remove '.' and '..' and remove files starting with '._'
+mask = ~ismember({Contents_EX_Area_Type(:).name},{'.','..'})& ~startsWith({Contents_EX_Area_Type(:).name},'._');
+Contents_EX_Area_Type = Contents_EX_Area_Type(mask);
 
 NumTrials=length(Contents_EX_Area_Type);
 
