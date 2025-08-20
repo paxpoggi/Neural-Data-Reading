@@ -126,7 +126,7 @@ want_artifact_rejection = false;
 
 want_LFP = true;
 want_MUA = true;
-want_Spike = false;
+want_Spike = true;
 
 % This boolean determines whether to keep the wideband data saved after
 % processing the different derivative activities. Keeping this to false
@@ -139,8 +139,8 @@ keep_wideband=false;
 % the raw wideband and notch filtered. Regular wideband is rereferenced as
 % well
 
-keep_raw = true;
-keep_notch = true;
+keep_raw = false;
+keep_notch = false;
 
 %%
 
