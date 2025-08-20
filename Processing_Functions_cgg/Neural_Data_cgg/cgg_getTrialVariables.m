@@ -82,7 +82,7 @@ MnkID = 1; %1 = Frey
 
 proccessed_path = cfg.outdatadir_SessionName;
 
-[TrialDATA, BlockDATA]  = cgg_singlesession_data_LT3(folder_name, session_file, data_path,proccessed_path, Area, MnkID);
+[TrialDATA, BlockDATA]  = cgg_singlesession_data_LT3(folder_name, session_file, data_path,proccessed_path, Area, MnkID, monkey_name);
 %%
 trialDefsFolder=[proccessed_path, filesep, 'ProcessedData', filesep, 'TrialDefs.mat'];
 load(trialDefsFolder);

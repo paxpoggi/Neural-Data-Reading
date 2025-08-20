@@ -1,5 +1,6 @@
 %% Compile Data Script - single session data
-function [TrialDATA, BlockDATA, this_ouput_test]  = cgg_singlesession_data_LT3(folder_name, session_file, data_path, Processed_path, Area, MnkID)
+function [TrialDATA, BlockDATA, this_ouput_test]  = cgg_singlesession_data_LT3(folder_name, session_file, data_path, Processed_path, Area, MnkID, monkey_name)
+
 
 %Practice data
 % folder_name = 'Fr_EStim_01_21-11-12_009_01';
@@ -35,12 +36,17 @@ blockData = blockData.blockData;
 frameData = load([Processed_path filesep 'ProcessedData' filesep 'FrameData.mat']);
 frameData = frameData.frameData;
 
-
-% Block feature
-BlkDef_name = dir([main_path filesep 'RuntimeData' filesep 'SessionSettings' filesep 'FDF03*.*']);
-BlkDef_file = BlkDef_name.name;
-BlkDef_file = split(BlkDef_file ,"_");
-
+switch monkey_name
+    case {'Frey','Wotan'}
+        % Block feature
+        BlkDef_name = dir([main_path filesep 'RuntimeData' filesep 'SessionSettings' filesep 'FDF03*.*']);
+        BlkDef_file = BlkDef_name.name;
+        BlkDef_file = split(BlkDef_file ,"_");
+    case 'Igor'
+        BlkDef_name = dir([main_path filesep 'RuntimeData' filesep 'SessionSettings' filesep 'FL2D*.*']);
+        BlkDef_file = BlkDef_name.name;
+        BlkDef_file = split(BlkDef_file ,"_");
+end
 %Stimulation setting
 stimulation_setting = BlkDef_file{9};
 
