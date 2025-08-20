@@ -763,7 +763,7 @@ if have_chanmap
     ft_channelselection( this_channel_map(this_probe_selection), rechdr.label, {} );
 else
     preproc_config_rec.channel = ...
-    ft_channelselection( this_channel_map(this_probe_selection), rechdr.label, {} );
+    ft_channelselection(this_probe_selection, rechdr.label, {} );
 end
 
 disp('.. Reading wideband recorder data.');
