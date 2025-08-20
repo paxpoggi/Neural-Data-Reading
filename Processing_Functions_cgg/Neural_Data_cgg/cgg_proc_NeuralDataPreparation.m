@@ -758,8 +758,13 @@ switch probe_mapping
         this_channel_map = chanmap_rec_mapped;
 end
 
-preproc_config_rec.channel = ...
-  ft_channelselection( this_channel_map(this_probe_selection), rechdr.label, {} );
+if have_chanmap
+    preproc_config_rec.channel = ...
+    ft_channelselection( this_channel_map(this_probe_selection), rechdr.label, {} );
+else
+    preproc_config_rec.channel = ...
+    ft_channelselection( this_channel_map(this_probe_selection), rechdr.label, {} );
+end
 
 disp('.. Reading wideband recorder data.');
 this_recdata_wideband = ft_preprocessing( preproc_config_rec );
