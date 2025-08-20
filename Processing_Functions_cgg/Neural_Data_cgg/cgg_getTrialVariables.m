@@ -37,7 +37,7 @@ if ~(exist(TrialVariables_file_name,'file'))
 
     %% add in cases for woton and frey vs Igor
     switch monkey_name
-        case {'Wotan','Frey'}
+        case 'Frey'
             
             Session_struct = dir(fullfile(inputfolder,'Session*'));
             USE_Session_Name = Session_struct.name;
@@ -48,7 +48,7 @@ if ~(exist(TrialVariables_file_name,'file'))
                 disp('!!! The wrong session may be used to identify trial variables');
             end
         
-        case 'Igor'
+        case {'Igor', 'Wotan'}
             [~, SessionName]=fileparts(inputfolder);
             Session_struct = dir(fullfile(inputfolder, '*_BHV'));
             USE_Session_Name = [SessionName '_BHV'];

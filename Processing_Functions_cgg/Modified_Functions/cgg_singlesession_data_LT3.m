@@ -37,12 +37,12 @@ frameData = load([Processed_path filesep 'ProcessedData' filesep 'FrameData.mat'
 frameData = frameData.frameData;
 
 switch monkey_name
-    case {'Frey','Wotan'}
+    case 'Frey'
         % Block feature
         BlkDef_name = dir([main_path filesep 'RuntimeData' filesep 'SessionSettings' filesep 'FDF03*.*']);
         BlkDef_file = BlkDef_name.name;
         BlkDef_file = split(BlkDef_file ,"_");
-    case 'Igor'
+    case {'Igor', 'Wotan'}
         BlkDef_name = dir([main_path filesep 'RuntimeData' filesep 'SessionSettings' filesep 'FL2D*.*']);
         BlkDef_file = BlkDef_name.name;
         BlkDef_file = split(BlkDef_file ,"_");
