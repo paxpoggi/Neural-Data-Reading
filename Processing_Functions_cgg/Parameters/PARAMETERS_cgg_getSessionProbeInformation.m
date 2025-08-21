@@ -44,7 +44,7 @@ switch SessionName
         fourth_probe_area='CD_002';
         probe_area={first_probe_area,second_probe_area,...
             third_probe_area,fourth_probe_area};
-    case 'Ig_VU595_05_2023-03-10_A'
+    case 'Ig_VU595_07_2023-03-14_A'
         first_probe=1:128;
         second_probe=129:256;  
         third_probe=257:384;  
