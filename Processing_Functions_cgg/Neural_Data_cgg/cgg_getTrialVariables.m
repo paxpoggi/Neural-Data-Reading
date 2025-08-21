@@ -4,6 +4,7 @@ function [trialVariables] = cgg_getTrialVariables(varargin)
 %%
 
 isfunction=exist('varargin','var');
+monkey_name = CheckVararginPairs('monkey_name', 'Frey', varargin{:});
 
 if isfunction
 [cfg] = cgg_generateNeuralDataFoldersTopLevel(varargin{:});
@@ -77,12 +78,31 @@ exptType='FLU';
 folder_name = Session_Name;
 session_file = USE_Session_Name;
 data_path = Path_Experiment;
-Area = 1; %1 = ACC, 2 = CD
-MnkID = 1; %1 = Frey
+% Area = 1; %1 = ACC, 2 = CD
+switch monkey_name
+    case 'Frey', MnkID=1;
+    case 'Wotan', MnkID=2;
+    case 'Igor', MnkID=3;
+end
+% MnkID = 1; %1 = Frey
 
 proccessed_path = cfg.outdatadir_SessionName;
 
-[TrialDATA, BlockDATA]  = cgg_singlesession_data_LT3(folder_name, session_file, data_path,proccessed_path, Area, MnkID, monkey_name);
+[TrialDATA, BlockDATA]  = cgg_singlesession_data_LT3(folder_name, session_file, data_path,proccessed_path, NaN, MnkID, monkey_name);
+% Save behavior once per session (area-agnostic)
+sessTrialPath = fullfile(cfg_v2.outdatadir.Experiment.Session.Trial_Information.path, ...
+                         ['TrialDATA_session_' cfg.SessionName '.mat']);
+sessBlockPath = fullfile(cfg_v2.outdatadir.Experiment.Session.Trial_Information.path, ...
+                         ['BlockDATA_session_' cfg.SessionName '.mat']);
+try
+    save(sessTrialPath, 'TrialDATA', '-v7.3');
+    save(sessBlockPath, 'BlockDATA', '-v7.3');
+catch ME
+     warning(ME.identifier, ...
+        'Could not save per-probe Trial/Block data for %s: %s', ...
+        this_probe_area, ME.message);
+end
+
 %%
 trialDefsFolder=[proccessed_path, filesep, 'ProcessedData', filesep, 'TrialDefs.mat'];
 load(trialDefsFolder);
