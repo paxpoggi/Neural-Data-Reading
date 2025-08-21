@@ -63,6 +63,33 @@ inputfolder=cfg.inputfolder;
 outdatadir=cfg.outdatadir;
 [cfg_epoch] = cgg_generateEpochFolders(Epoch,'inputfolder',inputfolder,'outdatadir',outdatadir);
 
+
+
+% ---- Load (or create) session-level behavior once ----
+[cfg_v2] = cgg_generateNeuralDataFoldersTopLevel_v2('inputfolder',inputfolder,'outdatadir',outdatadir);
+
+sessTrialPath = fullfile(cfg_v2.outdatadir.Experiment.Session.Trial_Information.path, ...
+                         ['TrialDATA_session_' cfg.SessionName '.mat']);
+sessBlockPath = fullfile(cfg_v2.outdatadir.Experiment.Session.Trial_Information.path, ...
+                         ['BlockDATA_session_' cfg.SessionName '.mat']);
+
+TrialDATA_session = [];
+BlockDATA_session = [];
+
+if exist(sessTrialPath,'file') && exist(sessBlockPath,'file')
+    S1 = load(sessTrialPath);  TrialDATA_session  = S1.TrialDATA;
+    S2 = load(sessBlockPath);  BlockDATA_session  = S2.BlockDATA;
+else
+    % Force creation (side effect: saves the session-level files to those paths)
+    cgg_getTrialVariables('inputfolder',inputfolder, ...
+                          'outdatadir',outdatadir, ...
+                          'monkey_name',monkey_name);
+    % Now load them
+    S1 = load(sessTrialPath);  TrialDATA_session  = S1.TrialDATA;
+    S2 = load(sessBlockPath);  BlockDATA_session  = S2.BlockDATA;
+end
+
+
 Session_Start_Message=sprintf('*** Starting Processing Session: %s',cfg.SessionName);
 Session_End_Message=sprintf('*** Finished Processing Session: %s',cfg.SessionName);
 disp(Session_Start_Message);
@@ -95,6 +122,15 @@ end
     'Frame_Event_Selection_Location',Frame_Event_Selection_Location_Baseline,...
     'Frame_Event_Window_Before',Window_Before_Baseline,...
     'Frame_Event_Window_After',Window_After_Baseline);
+
+% ---- Session-level trial variables (compute once, reuse per probe) ----
+trialVariables = cgg_getTrialVariables( ...
+    'inputfolder', inputfolder, ...
+    'outdatadir',  outdatadir, ...
+    'monkey_name', monkey_name);
+
+TrialVariableTrialNumber = [trialVariables(:).TrialNumber];
+
 %% Iterate through all Areas
 
 for aidx=1:length(Area_Names)
@@ -117,7 +153,29 @@ IsProbeProcessed = cgg_checkProbeProcessed(this_probe_area,...
 
 %% Only process if not already processed
 if ~IsProbeProcessed
-    
+
+% === Stamp Area and (optionally) save per-probe behavior ===
+area_code = area_code_from_name(this_probe_area);
+
+TrialDATA_probe = TrialDATA_session;
+BlockDATA_probe = BlockDATA_session;
+
+nTr = numel(TrialDATA_probe.Block);
+nBl = numel(BlockDATA_probe.BlockNum);
+
+TrialDATA_probe.Area = repmat(area_code, nTr, 1);
+BlockDATA_probe.Area = repmat(area_code, nBl, 1);
+
+try
+    perProbeDir = cfg_directories.outdatadir.Experiment.Session.Trial_Information.path;
+    if ~exist(perProbeDir, 'dir'); mkdir(perProbeDir); end
+    save(fullfile(perProbeDir, ['TrialDATA_' this_probe_area '.mat']), 'TrialDATA_probe', '-v7.3');
+    save(fullfile(perProbeDir, ['BlockDATA_' this_probe_area '.mat']), 'BlockDATA_probe', '-v7.3');
+catch ME
+    warning(ME.identifier, 'Could not save per-probe Trial/Block data for %s: %s', ...
+            this_probe_area, ME.message);
+end
+
 Start_Message=sprintf('*** Start of Processing of %s',this_probe_area);
 disp(Start_Message);
 
@@ -143,13 +201,14 @@ SamplingFrequency=mode(SF_Data);
 
 [Detrend_Data,Detrend_Baseline] = cgg_procDetrendFromBaseline(Segmented_Data,Segmented_Baseline,TrialNumbers_Data,TrialNumbers_Baseline);
 
-%% Get the trial variables
-
-[trialVariables] = cgg_getTrialVariables('inputfolder',inputfolder,'outdatadir',outdatadir,'monkey_name',monkey_name);
+% %% Get the trial variables (this has been adjusted to before the probe
+% loop so that it is only computed once, probe area is added during loop)
+% 
+% [trialVariables] = cgg_getTrialVariables('inputfolder',inputfolder,'outdatadir',outdatadir,'monkey_name',monkey_name);
+% TrialVariableTrialNumber=[trialVariables(:).TrialNumber];
 
 %% Select the data that is not aborted or too long
 
-TrialVariableTrialNumber=[trialVariables(:).TrialNumber];
 
 [TrialCondition,MatchValue] = cgg_getTrialCriteriaBaseline(trialVariables,'TrialDuration_Minimum',TrialDuration_Minimum);
 
@@ -259,3 +318,16 @@ end % End If for whether Session has been processed
 disp(Session_End_Message);
 end
 
+% helper function for area code
+function code = area_code_from_name(area_name)
+    a = upper(string(area_name));
+    if startsWith(a,"ACC")
+        code = 1;
+    elseif startsWith(a,"CD")
+        code = 2;
+    elseif startsWith(a,"PFC")
+        code = 3;
+    else
+        code = NaN; % unknown; still won't crash
+    end
+end
