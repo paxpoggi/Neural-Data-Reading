@@ -1,6 +1,7 @@
 function cfg = PARAMETERS_cgg_getDisconnectedChannels(varargin)
 %PARAMETERS_CGG_GETDISCONNECTEDCHANNELS Summary of this function goes here
 %   Detailed explanation goes here
+monkey_name = CheckVararginPairs('monkey_name', '', varargin{:});
 
 switch monkey_name
     case 'Frey'
