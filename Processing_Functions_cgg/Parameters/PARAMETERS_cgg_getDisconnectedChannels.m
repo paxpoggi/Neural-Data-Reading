@@ -4,6 +4,15 @@ function cfg = PARAMETERS_cgg_getDisconnectedChannels(varargin)
 monkey_name = CheckVararginPairs('ExperimentName', 'IDED_DBC_AH_AN/VU595_DBC', varargin{:});
 
 switch monkey_name
+    case 'IDED_DBC_AH_AN/VU595_DBC'
+        Start_Group=2;
+        End_Group=35;
+        NumReplicates=10; %10
+        InDistance='sqeuclidean';
+        NumIterations=20;
+        Disconnected_Channels_GT=[];
+        Disconnected_Threshold=0.5;
+        
     case 'Wotan_FLToken_Probe_01'
 
         Start_Group=2;
@@ -13,14 +22,27 @@ switch monkey_name
         NumIterations=20;
         Disconnected_Channels_GT=[30,60:64];
         Disconnected_Threshold=0.5;
-    case 'IDED_DBC_AH_AN/VU595_DBC'
+
+    case 'Frey_FLToken_Probe_03'
         Start_Group=2;
         End_Group=35;
         NumReplicates=10; %10
         InDistance='sqeuclidean';
         NumIterations=20;
-        Disconnected_Channels_GT=[];
+        Disconnected_Channels_GT=[30,60:64];
         Disconnected_Threshold=0.5;
+
+    
+    case 'Frey_FLToken_Probe_02'
+        Start_Group=2;
+        End_Group=35;
+        NumReplicates=10; %10
+        InDistance='sqeuclidean';
+        NumIterations=20;
+        Disconnected_Channels_GT=[30,60:64];
+        Disconnected_Threshold=0.5;
+
+
 end
 
 w = whos;

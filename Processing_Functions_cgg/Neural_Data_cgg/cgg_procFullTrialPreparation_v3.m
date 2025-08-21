@@ -5,6 +5,8 @@ function cgg_procFullTrialPreparation_v3(varargin)
 %% Parameters
 monkey_name = CheckVararginPairs('monkey_name', 'Frey', varargin{:});
 
+ExperimentName = CheckVararginPairs('ExperimentName','IDED_DBC_AH_AN/VU595_DBC', varargin{:});
+
 Epoch = CheckVararginPairs('Epoch', 'Decision', varargin{:});
 
 cfg_param = PARAMETERS_cgg_procFullTrialPreparation_v2(Epoch);
@@ -127,7 +129,8 @@ end
 trialVariables = cgg_getTrialVariables( ...
     'inputfolder', inputfolder, ...
     'outdatadir',  outdatadir, ...
-    'monkey_name', monkey_name);
+    'monkey_name', monkey_name,...
+    'ExperimentName', ExperimentName);
 
 TrialVariableTrialNumber = [trialVariables(:).TrialNumber];
 

@@ -5,7 +5,7 @@ function [trialVariables] = cgg_getTrialVariables(varargin)
 
 isfunction=exist('varargin','var');
 monkey_name = CheckVararginPairs('monkey_name', 'Frey', varargin{:});
-
+ExperimentName = CheckVararginPairs('ExperimentName', 'IDED_DBC_AH_AN/VU595_DBC', varargin{:});
 if isfunction
 [cfg] = cgg_generateNeuralDataFoldersTopLevel(varargin{:});
 [cfg_v2] = cgg_generateNeuralDataFoldersTopLevel_v2(varargin{:});
@@ -37,8 +37,31 @@ TrialVariables_file_name=[cfg_v2.outdatadir.Experiment.Session.Trial_Information
 if ~(exist(TrialVariables_file_name,'file')) 
 
     %% add in cases for woton and frey vs Igor
-    switch monkey_name
-        case 'Frey'
+    switch ExperimentName
+        
+        case 'Wotan_FLToken_Probe_01'
+            
+            Session_struct = dir(fullfile(inputfolder,'Session*'));
+            USE_Session_Name = Session_struct.name;
+        
+            if length(Session_struct)>1
+                disp(['!!! Please make sure there is only one USE session in the '...
+                'recording folder']);
+                disp('!!! The wrong session may be used to identify trial variables');
+            end
+
+        case 'Frey_FLToken_Probe_02'
+            
+            Session_struct = dir(fullfile(inputfolder,'Session*'));
+            USE_Session_Name = Session_struct.name;
+        
+            if length(Session_struct)>1
+                disp(['!!! Please make sure there is only one USE session in the '...
+                'recording folder']);
+                disp('!!! The wrong session may be used to identify trial variables');
+            end
+
+        case 'Frey_FLToken_Probe_03'
             
             Session_struct = dir(fullfile(inputfolder,'Session*'));
             USE_Session_Name = Session_struct.name;
@@ -49,7 +72,7 @@ if ~(exist(TrialVariables_file_name,'file'))
                 disp('!!! The wrong session may be used to identify trial variables');
             end
         
-        case {'Igor', 'Wotan'}
+        case 'IDED_DBC_AH_AN/VU595_DBC'
             [~, SessionName]=fileparts(inputfolder);
             Session_struct = dir(fullfile(inputfolder, '*_BHV'));
             USE_Session_Name = [SessionName '_BHV'];
@@ -88,7 +111,7 @@ end
 
 proccessed_path = cfg.outdatadir_SessionName;
 
-[TrialDATA, BlockDATA]  = cgg_singlesession_data_LT3(folder_name, session_file, data_path,proccessed_path, NaN, MnkID, monkey_name);
+[TrialDATA, BlockDATA]  = cgg_singlesession_data_LT3(folder_name, session_file, data_path,proccessed_path, NaN, MnkID, ExperimentName);
 % Save behavior once per session (area-agnostic)
 sessTrialPath = fullfile(cfg_v2.outdatadir.Experiment.Session.Trial_Information.path, ...
                          ['TrialDATA_session_' cfg.SessionName '.mat']);

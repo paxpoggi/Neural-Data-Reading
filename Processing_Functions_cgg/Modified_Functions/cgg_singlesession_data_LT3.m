@@ -37,7 +37,14 @@ frameData = load([Processed_path filesep 'ProcessedData' filesep 'FrameData.mat'
 frameData = frameData.frameData;
 
 switch monkey_name
-    case 'Frey'
+    case 'Wotan_FLToken_Probe_01'
+        % Block feature
+        BlkDef_name = dir([main_path filesep 'RuntimeData' filesep 'SessionSettings' filesep 'FDF03*.*']);
+        BlkDef_file = BlkDef_name.name;
+        BlkDef_file = split(BlkDef_file ,"_");
+        %stimulatio setting
+        stimulation_setting = BlkDef_file{9};
+    case 'Frey_FLToken_Probe_02'
         % Block feature
         BlkDef_name = dir([main_path filesep 'RuntimeData' filesep 'SessionSettings' filesep 'FDF03*.*']);
         BlkDef_file = BlkDef_name.name;
@@ -45,7 +52,15 @@ switch monkey_name
         %stimulatio setting
         stimulation_setting = BlkDef_file{9};
 
-    case {'Igor', 'Wotan'} 
+    case 'Frey_FLToken_Probe_03'
+        % Block feature
+        BlkDef_name = dir([main_path filesep 'RuntimeData' filesep 'SessionSettings' filesep 'FDF03*.*']);
+        BlkDef_file = BlkDef_name.name;
+        BlkDef_file = split(BlkDef_file ,"_");
+        %stimulatio setting
+        stimulation_setting = BlkDef_file{9};
+
+    case 'IDED_DBC_AH_AN/VU595_DBC'
         BlkDef_name = dir([main_path filesep 'RuntimeData' filesep 'SessionSettings' filesep 'FL2D*.*']);
         BlkDef_file = BlkDef_name.name;
         BlkDef_file = split(BlkDef_file ,"_");
