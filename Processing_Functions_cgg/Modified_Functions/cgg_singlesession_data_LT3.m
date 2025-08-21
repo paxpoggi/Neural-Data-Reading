@@ -1,5 +1,5 @@
 %% Compile Data Script - single session data
-function [TrialDATA, BlockDATA]  = cgg_singlesession_data_LT3(folder_name, session_file, data_path, Processed_path, Area, MnkID, monkey_name)
+function [TrialDATA, BlockDATA]  = cgg_singlesession_data_LT3(folder_name, session_file, data_path, Processed_path, Area, MnkID, ExperimentName)
 
 
 %Practice data
@@ -9,11 +9,23 @@ function [TrialDATA, BlockDATA]  = cgg_singlesession_data_LT3(folder_name, sessi
 
 %[trialData, blockData] = ProcessSingleSessionData_FLU('exptType','FLU',[data_path filesep folder_name filesep session_file],'Spectrum');
 
-
-% Check that you are adding new sessions to existing data
-newStr = split(folder_name,"_");
-session_num = sscanf(newStr{end-1}, '%d');
-
+switch ExperimentName
+    case 'Wotan_FLToken_Probe_01'
+        % Check that you are adding new sessions to existing data
+        newStr = split(folder_name,"_");
+        session_num = sscanf(newStr{end-1}, '%d');
+    case 'Frey_FLToken_Probe_02'
+        % Check that you are adding new sessions to existing data
+        newStr = split(folder_name,"_");
+        session_num = sscanf(newStr{end-1}, '%d');
+     case 'Frey_FLToken_Probe_03'
+         % Check that you are adding new sessions to existing data
+        newStr = split(folder_name,"_");
+        session_num = sscanf(newStr{end-1}, '%d');
+    case 'IDED_DBC_AH_AN/VU595_DBC'
+        newStr = split(folder_name,"_");
+        session_num = str2double(newStr{3});
+ end
 main_path = [data_path filesep folder_name filesep session_file]; 
 % Processed_path = [data_path filesep folder_name filesep session_file]; 
 
@@ -36,7 +48,7 @@ blockData = blockData.blockData;
 frameData = load([Processed_path filesep 'ProcessedData' filesep 'FrameData.mat']);
 frameData = frameData.frameData;
 
-switch monkey_name
+switch ExperimentName
     case 'Wotan_FLToken_Probe_01'
         % Block feature
         BlkDef_name = dir([main_path filesep 'RuntimeData' filesep 'SessionSettings' filesep 'FDF03*.*']);
@@ -70,39 +82,77 @@ switch monkey_name
 end
 
 %feature target:
-if verLessThan('matlab','9.8')
-BlkDef_rules = readtable([BlkDef_name.folder filesep BlkDef_name.name], 'HeaderLines', 1);
-else
-BlkDef_rules = readtable([BlkDef_name.folder filesep BlkDef_name.name], 'ReadVariableNames', false, 'HeaderLines', 1);
+% if verLessThan('matlab','9.8')
+% BlkDef_rules = readtable([BlkDef_name.folder filesep BlkDef_name.name], 'HeaderLines', 1);
+% else
+% BlkDef_rules = readtable([BlkDef_name.folder filesep BlkDef_name.name], 'ReadVariableNames', false, 'HeaderLines', 1);
+% end
+% disp([BlkDef_name.folder filesep BlkDef_name.name])
+% Var3 = BlkDef_rules.Var3;
+% relFeat_idx = find(contains(Var3,'ContextNums'));
+% 
+% BlkFeatureTarget = zeros(36,1); % 1-4
+% 
+% for i = 1:36
+% 
+%     relfeatures = Var3(relFeat_idx(i));
+%     relfeatures = split(relfeatures ,",");
+% 
+%     feats = zeros(4,1);
+% 
+%     feat1 = relfeatures{1};
+%     feat1(1) = []; 
+% 
+%     feats(1) = str2num(feat1);
+%     feats(2) = str2num(relfeatures{2});
+%     feats(3) = str2num(relfeatures{3});
+%     %not using texture as feature??
+%     %feats(4) = str2num(relfeatures{4});
+% 
+%     feat4 = relfeatures{5};
+%     feat4(end) = []; 
+%     feats(4) = str2num(feat4);
+% 
+%     BlkFeatureTarget(i,:) = find(feats > -1);
+% end
+
+% --- Feature target parsing (robust for this JSON-like BlockDef format) ---
+blkPath = fullfile(BlkDef_name.folder, BlkDef_name.name);
+txt     = fileread(blkPath);  % read raw text
+
+% Find each RelevantFeatureTemplate block: 5 groups (one per feature dimension)
+pat = '"RelevantFeatureTemplate"\s*:\s*\[\s*\[([^\]]*)\]\s*,\s*\[([^\]]*)\]\s*,\s*\[([^\]]*)\]\s*,\s*\[([^\]]*)\]\s*,\s*\[([^\]]*)\]\s*\]';
+tokens = regexp(txt, pat, 'tokens');
+
+N = numel(tokens);
+if N == 0
+    error('No RelevantFeatureTemplate blocks found in %s', blkPath);
 end
-disp([BlkDef_name.folder filesep BlkDef_name.name])
-Var3 = BlkDef_rules.Var3;
-relFeat_idx = find(contains(Var3,'ContextNums'));
 
-BlkFeatureTarget = zeros(36,1); % 1-4
+BlkFeatureTarget = zeros(N,1);
 
-for i = 1:36
-
-    relfeatures = Var3(relFeat_idx(i));
-    relfeatures = split(relfeatures ,",");
-
-    feats = zeros(4,1);
-
-    feat1 = relfeatures{1};
-    feat1(1) = []; 
-
-    feats(1) = str2num(feat1);
-    feats(2) = str2num(relfeatures{2});
-    feats(3) = str2num(relfeatures{3});
-    %not using texture as feature??
-    %feats(4) = str2num(relfeatures{4});
-
-    feat4 = relfeatures{5};
-    feat4(end) = []; 
-    feats(4) = str2num(feat4);
-
-    BlkFeatureTarget(i,:) = find(feats > -1);
+for i = 1:N
+    feats = nan(5,1);
+    for k = 1:5
+        % tokens{i}{k} looks like "-1" or "7" (sometimes with spaces/commas)
+        strk = strtrim(tokens{i}{k});
+        % strip any trailing commas and spaces
+        strk = regexprep(strk, ',.*$', '');
+        val  = str2double(strk);
+        if isnan(val), val = -1; end
+        feats(k) = val;
+    end
+    idx = find(feats > -1, 1, 'first');  % first feature that is not -1
+    if isempty(idx)
+        BlkFeatureTarget(i) = NaN;  % no active feature found (unlikely)
+    else
+        BlkFeatureTarget(i) = idx;  % 1..5
+    end
 end
+
+% N blocks were parsed; later you can truncate/align to Nblk if needed:
+% BlkFeatureTarget = BlkFeatureTarget(1:min(N, Nblk));
+
 
 %stim type
 if strcmpi(stimulation_setting, 'SREL')    
