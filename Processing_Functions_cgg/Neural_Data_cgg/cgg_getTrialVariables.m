@@ -96,6 +96,33 @@ outdatadir_LT=cfg.outdatadir_SessionName;
 gazeArgs='TX300';
 exptType='FLU';
 
+
+
+% --- Sanity check: make sure we're reading from the INPUT tree
+% ---debugging code 
+td = fullfile(dataFolder, 'RuntimeData', 'TrialData');
+fprintf('DEBUG dataFolder = %s\n', dataFolder);
+fprintf('DEBUG trialData path = %s\n', td);
+
+if ~startsWith(dataFolder, inputfolder)
+    error('dataFolder points to the output tree! dataFolder=%s  inputfolder=%s', dataFolder, inputfolder);
+end
+
+if ~exist(td, 'dir')
+    error('Expected TrialData dir does not exist: %s', td);
+end
+
+listing = dir(fullfile(td, '*TrialData.txt'));
+fprintf('DEBUG found %d TrialData files\n', numel(listing));
+for k = 1:min(5, numel(listing))
+    fprintf('   %s\n', fullfile(listing(k).folder, listing(k).name));
+end
+
+if isempty(listing)
+    error('No *TrialData.txt in %s. (Check you are pointing at INPUT, not OUTPUT.)', td);
+end
+%% debugging code
+
 [trialData, blockData] = ProcessSingleSessionData_FLU('exptType',exptType,'gazeArgs',gazeArgs,'outdatadir',outdatadir_LT,'dataFolder',dataFolder);
 
 folder_name = Session_Name;

@@ -93,6 +93,15 @@ keep_notch = cfg.keep_notch;
 outdatadir_Experiment=[outdatadir, filesep, ExperimentName];
 outdatadir_SessionName=[outdatadir_Experiment, filesep, SessionName];
 
+% --- Sanity check for SessionName/ExperimentName ---
+if ~exist(outdatadir_Experiment, 'dir')
+    error('Experiment folder does not exist: %s', outdatadir_Experiment);
+end
+
+if ~exist(outdatadir_SessionName, 'dir')
+    error('Session folder does not exist: %s\n(Check spelling, underscores, dashes, etc.)', outdatadir_SessionName);
+end
+
 % Make the Event Information, Frame Information, and Trial Information
 % output folder names.
 outdatadir_EventInformation=[outdatadir_SessionName, filesep, 'Event_Information'];
@@ -110,8 +119,20 @@ outdatadir_TrialInformation=[outdatadir_SessionName, filesep, 'Trial_Information
 % outdatadir_LFP=[outdatadir_Activity, filesep, 'LFP'];
 % outdatadir_Spike=[outdatadir_Activity, filesep, 'Spike'];
 % outdatadir_MUA=[outdatadir_Activity, filesep, 'MUA'];
+%% debugging code
+fprintf('\n[DBG] outdatadir root: %s\n', outdatadir);
+fprintf('[DBG] ExperimentName: "%s"\n', ExperimentName);
+fprintf('[DBG] SessionName:   "%s"\n', SessionName);
 
+outdatadir_Experiment = fullfile(outdatadir, ExperimentName);
+outdatadir_SessionName = fullfile(outdatadir_Experiment, SessionName);
 
+fprintf('[DBG] Expect Experiment dir: %s (exist=%d)\n', outdatadir_Experiment, exist(outdatadir_Experiment,'dir'));
+fprintf('[DBG] Expect Session   dir: %s (exist=%d)\n', outdatadir_SessionName, exist(outdatadir_SessionName,'dir'));
+
+if exist(outdatadir_SessionName,'dir')
+    ls(outdatadir_SessionName); % quick peek to verify it's the one you think
+end
 % Check if the Experiment and Session output folders exist and if they do
 % not, create them.
 if ~exist(outdatadir_Experiment, 'dir')
@@ -120,7 +141,7 @@ end
 if ~exist(outdatadir_SessionName, 'dir')
     mkdir(outdatadir_SessionName);
 end
-
+%%end of debugging code
 % Check if the Event Information, Frame Information, and Trial Information
 % output folders exist and if they do not, create them.
 if ~exist(outdatadir_EventInformation, 'dir')
