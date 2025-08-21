@@ -1,5 +1,5 @@
 %% Compile Data Script - single session data
-function [TrialDATA, BlockDATA, this_ouput_test]  = cgg_singlesession_data_LT3(folder_name, session_file, data_path, Processed_path, Area, MnkID, monkey_name)
+function [TrialDATA, BlockDATA]  = cgg_singlesession_data_LT3(folder_name, session_file, data_path, Processed_path, Area, MnkID, monkey_name)
 
 
 %Practice data
@@ -42,13 +42,17 @@ switch monkey_name
         BlkDef_name = dir([main_path filesep 'RuntimeData' filesep 'SessionSettings' filesep 'FDF03*.*']);
         BlkDef_file = BlkDef_name.name;
         BlkDef_file = split(BlkDef_file ,"_");
-    case {'Igor', 'Wotan'}
+        %stimulatio setting
+        stimulation_setting = BlkDef_file{9};
+
+    case {'Igor', 'Wotan'} 
         BlkDef_name = dir([main_path filesep 'RuntimeData' filesep 'SessionSettings' filesep 'FL2D*.*']);
         BlkDef_file = BlkDef_name.name;
         BlkDef_file = split(BlkDef_file ,"_");
+        %Stimulation setting
+        stimulation_setting = 'NONE';
+
 end
-%Stimulation setting
-stimulation_setting = BlkDef_file{9};
 
 %feature target:
 if verLessThan('matlab','9.8')
@@ -86,12 +90,13 @@ for i = 1:36
 end
 
 %stim type
-if stimulation_setting == 'SREL' == 1
+if strcmpi(stimulation_setting, 'SREL')    
     Stim_object = 1; % Rewarded object stim
-elseif stimulation_setting  == 'SIRR' == 1
+elseif strcmpi(stimulation_setting,'SIRR')
     Stim_object = 2 ;% Unrewarded object stim
 else
-    error = 'no stim object';
+    % no stimulation 
+    Stim_object = 0;
 end
 
 
@@ -121,12 +126,12 @@ Nblk = length(BlockDATA.BlockNum);
 BlockDATA.MnkID = MnkID*ones(Nblk,1); %1 = Frey, 2 = ?
 BlockDATA.SessionNum = session_num*ones(Nblk,1);
 BlockDATA.BlockLabel = blockData.BlockID;
-BlockDATA.Dimenion = blockData.NumActiveDims; %[1,2,3]
+BlockDATA.Dimension = blockData.NumActiveDims; %[1,2,3]
 BlockDATA.GainCond = blockData.MeanPositiveTokens; %[2,3]
 BlockDATA.LossCond = blockData.MeanNegativeTokens; %[-1,-3]
 BlockDATA.StimSession = Stim_object*ones(Nblk,1); %1 = SR+, 2 = SR-
 BlockDATA.StimBlockCond = (Stim_pattern(1:Nblk))';
-BlockDATA.Area = Area*ones(Nblk,1); %1 = ACC, 2 = CD
+% BlockDATA.Area = Area*ones(Nblk,1); %1 = ACC, 2 = CD
 BlockDATA.TargetFeature = BlkFeatureTarget(1:Nblk,1); % 1-4
 
 
@@ -137,13 +142,13 @@ Ntrls = length(TrialDATA.Block);
 TrialDATA.TrialInExperiment = trialData.TrialInExperiment;
 TrialDATA.TrialInBlock = trialData.TrialInBlock;
 TrialDATA.SessionNum = session_num*ones(Ntrls,1);
-TrialDATA.Area = Area*ones(Ntrls,1);
+% TrialDATA.Area = Area*ones(Ntrls,1);
 TrialDATA.StimSession = Stim_object*ones(Ntrls,1); %1 = SR+, 2 = SR-
 TrialDATA.Accuracy = oc;
 TrialDATA.RT = Reactiontime;
 TrialDATA.Stim = Stimulation;
 
-DimenionVec = zeros(Ntrls,1);
+DimensionVec = zeros(Ntrls,1);
 GainCondVec = zeros(Ntrls,1);
 LossCondVec = zeros(Ntrls,1);
 TokenCondVec = zeros(Ntrls,1);
@@ -167,7 +172,7 @@ for i = 1:Nblk
 
     idx = find(TrialDATA.Block == i);
 
-    DimenionVec(idx) = BlockDATA.Dimenion(i);
+    DimensionVec(idx) = BlockDATA.Dimension(i);
     GainCondVec(idx) = BlockDATA.GainCond(i);
     LossCondVec(idx) = BlockDATA.LossCond(i);
     TokenCondVec(idx) = BlockDATA.TokenCond(i);
@@ -175,7 +180,7 @@ for i = 1:Nblk
     TargetFeatureVec(idx) = BlockDATA.TargetFeature(i);
 end
 
-TrialDATA.iCndDim = DimenionVec;
+TrialDATA.iCndDim = DimensionVec;
 TrialDATA.GainCond = GainCondVec;
 TrialDATA.LossCond = LossCondVec;
 TrialDATA.iCndTok = TokenCondVec;
