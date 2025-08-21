@@ -1,10 +1,10 @@
 function cfg = PARAMETERS_cgg_getDisconnectedChannels(varargin)
 %PARAMETERS_CGG_GETDISCONNECTEDCHANNELS Summary of this function goes here
 %   Detailed explanation goes here
-monkey_name = CheckVararginPairs('monkey_name', 'Frey', varargin{:});
+monkey_name = CheckVararginPairs('ExperimentName', 'IDED_DBC_AH_AN/VU595_DBC', varargin{:});
 
 switch monkey_name
-    case {'Frey', 'Wotan'}
+    case 'Wotan_FLToken_Probe_01'
 
         Start_Group=2;
         End_Group=35;
@@ -13,7 +13,7 @@ switch monkey_name
         NumIterations=20;
         Disconnected_Channels_GT=[30,60:64];
         Disconnected_Threshold=0.5;
-    case 'Igor'
+    case 'IDED_DBC_AH_AN/VU595_DBC'
         Start_Group=2;
         End_Group=35;
         NumReplicates=10; %10

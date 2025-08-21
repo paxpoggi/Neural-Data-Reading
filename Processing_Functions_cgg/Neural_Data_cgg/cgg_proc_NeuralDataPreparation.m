@@ -13,7 +13,7 @@ function [inputfolder, outdatadir] = cgg_proc_NeuralDataPreparation(varargin)
 isfunction=exist('varargin','var');
 
 if isfunction
-monkey_name = CheckVararginPairs('monkey_name','Frey', varargin{:})
+ExperimentName = CheckVararginPairs('ExperimentName','IDED_DBC_AH_AN/VU595_DBC', varargin{:});
 end
 %% Directories
 
@@ -839,7 +839,7 @@ if ~(exist(this_area_clustering_file_name,'file'))
 %     'WideBand_Trial_%d.mat']);
 [Connected_Channels,Disconnected_Channels,...
     is_any_previously_rereferenced,Debugging_Info] = ...
-    cgg_getDisconnectedChannelsFromDirectories_v2(clustering_trial_count,monkey_name,...
+    cgg_getDisconnectedChannelsFromDirectories_v2(clustering_trial_count,ExperimentName,...
     'inputfolder',inputfolder,'outdatadir',outdatadir, ...
     'Activity_Type', 'WideBand','probe_area',this_probe_area);
 

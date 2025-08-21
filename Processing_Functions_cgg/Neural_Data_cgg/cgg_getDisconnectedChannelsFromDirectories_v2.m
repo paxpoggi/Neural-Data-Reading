@@ -1,4 +1,4 @@
-function [Connected_Channels,Disconnected_Channels,is_previously_rereferenced,Debugging_Info] = cgg_getDisconnectedChannelsFromDirectories_v2(Count_Sel_Trial,monkey_name,varargin)
+function [Connected_Channels,Disconnected_Channels,is_previously_rereferenced,Debugging_Info] = cgg_getDisconnectedChannelsFromDirectories_v2(Count_Sel_Trial,ExperimentName,varargin)
 %UNTITLED2 Summary of this function goes here
 %   Detailed explanation goes here
 
@@ -85,6 +85,6 @@ fullfilename = cgg_generateActivityFullFileName('inputfolder',inputfolder,'outda
 % rectrialdeftable=rectrialdeftable.rectrialdeftable;
 % [NumTrials,~]=size(rectrialdeftable);
 
-[Connected_Channels,Disconnected_Channels,is_previously_rereferenced,Debugging_Info] = cgg_getDisconnectedChannels_v3(Trial_Numbers,Count_Sel_Trial,fullfilename,monkey_name);
+[Connected_Channels,Disconnected_Channels,is_previously_rereferenced,Debugging_Info] = cgg_getDisconnectedChannels_v3(Trial_Numbers,Count_Sel_Trial,fullfilename,ExperimentName);
 end
 
