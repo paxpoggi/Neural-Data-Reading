@@ -4,29 +4,29 @@ function [cfg] = DATA_cggAllSessionInformationConfiguration
 
 cfg=struct([]);
 %% New VU595 Experiment with Wotan and Igor
-Monkey_Name='Wotan';
-ExperimentName='IDED_DBC_AH_AN/VU595_DBC';
-SessionName ='Wo_VU595_02_2023-05-23_A';
-LearningModelName='Wo_VU595_02_2023-05-23_A_001';
-
-[inputfolder,outdatadir,temporarydir,~] = ...
-    cgg_getBaseFoldersFromSessionInformation(Monkey_Name,...
-    ExperimentName,SessionName);
-
-this_FieldNum=length(cfg)+1;
-cfg(this_FieldNum).inputfolder=inputfolder;
-cfg(this_FieldNum).outdatadir=outdatadir;
-cfg(this_FieldNum).temporarydir=temporarydir;
-cfg(this_FieldNum).Monkey_Name=Monkey_Name;
-cfg(this_FieldNum).ExperimentName=ExperimentName;
-cfg(this_FieldNum).SessionName=SessionName;
-cfg(this_FieldNum).LearningModelName=LearningModelName;
-cfg(this_FieldNum).SessionFolder=[outdatadir filesep ExperimentName ...
-    filesep SessionName];
+% Monkey_Name='Wotan';
+% ExperimentName='IDED_DBC_AH_AN/VU595_DBC';
+% SessionName ='Wo_VU595_02_2023-05-23_A';
+% LearningModelName='Wo_VU595_02_2023-05-23_A_001';
+% 
+% [inputfolder,outdatadir,temporarydir,~] = ...
+%     cgg_getBaseFoldersFromSessionInformation(Monkey_Name,...
+%     ExperimentName,SessionName);
+% 
+% this_FieldNum=length(cfg)+1;
+% cfg(this_FieldNum).inputfolder=inputfolder;
+% cfg(this_FieldNum).outdatadir=outdatadir;
+% cfg(this_FieldNum).temporarydir=temporarydir;
+% cfg(this_FieldNum).Monkey_Name=Monkey_Name;
+% cfg(this_FieldNum).ExperimentName=ExperimentName;
+% cfg(this_FieldNum).SessionName=SessionName;
+% cfg(this_FieldNum).LearningModelName=LearningModelName;
+% cfg(this_FieldNum).SessionFolder=[outdatadir filesep ExperimentName ...
+%     filesep SessionName];
 
 Monkey_Name='Igor';  
 ExperimentName='IDED_DBC_AH_AN/VU595_DBC';
-SessionName= 'Ig_VU595_05_2023-03-10_A';
+SessionName= 'Ig_VU595_07_2023-03-14_A';
 LearningModelName='Ig_VU595_05_2023-03-10_A_001';
 
 [inputfolder,outdatadir,temporarydir,~] = ...
