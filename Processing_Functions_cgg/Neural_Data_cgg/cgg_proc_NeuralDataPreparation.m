@@ -13,7 +13,7 @@ function [inputfolder, outdatadir] = cgg_proc_NeuralDataPreparation(varargin)
 isfunction=exist('varargin','var');
 
 if isfunction
-monkey_name = CheckVararginPairs('monkey_name','', varargin{:})
+monkey_name = CheckVararginPairs('monkey_name','Frey', varargin{:})
 end
 %% Directories
 
