@@ -166,15 +166,15 @@ nBl = numel(BlockDATA_probe.BlockNum);
 TrialDATA_probe.Area = repmat(area_code, nTr, 1);
 BlockDATA_probe.Area = repmat(area_code, nBl, 1);
 
-try
-    perProbeDir = cfg_directories.outdatadir.Experiment.Session.Trial_Information.path;
-    if ~exist(perProbeDir, 'dir'); mkdir(perProbeDir); end
-    save(fullfile(perProbeDir, ['TrialDATA_' this_probe_area '.mat']), 'TrialDATA_probe', '-v7.3');
-    save(fullfile(perProbeDir, ['BlockDATA_' this_probe_area '.mat']), 'BlockDATA_probe', '-v7.3');
-catch ME
-    warning(ME.identifier, 'Could not save per-probe Trial/Block data for %s: %s', ...
-            this_probe_area, ME.message);
-end
+% try
+%     perProbeDir = cfg_directories.outdatadir.Experiment.Session.Trial_Information.path;
+%     if ~exist(perProbeDir, 'dir'); mkdir(perProbeDir); end
+%     save(fullfile(perProbeDir, ['TrialDATA_' this_probe_area '.mat']), 'TrialDATA_probe', '-v7.3');
+%     save(fullfile(perProbeDir, ['BlockDATA_' this_probe_area '.mat']), 'BlockDATA_probe', '-v7.3');
+% catch ME
+%     warning(ME.identifier, 'Could not save per-probe Trial/Block data for %s: %s', ...
+%             this_probe_area, ME.message);
+% end
 
 Start_Message=sprintf('*** Start of Processing of %s',this_probe_area);
 disp(Start_Message);
