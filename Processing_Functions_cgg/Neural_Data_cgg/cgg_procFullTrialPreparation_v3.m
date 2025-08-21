@@ -3,6 +3,7 @@ function cgg_procFullTrialPreparation_v3(varargin)
 %   Detailed explanation goes here
 
 %% Parameters
+monkey_name = CheckVararginPairs('monkey_name', 'Frey', varargin{:});
 
 Epoch = CheckVararginPairs('Epoch', 'Decision', varargin{:});
 
