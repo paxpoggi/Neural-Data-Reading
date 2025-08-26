@@ -62,12 +62,22 @@ switch Root_Directory
         inputfolder_base='/data';
         outputfolder_base=['/data/users/',Current_User];
         temporaryfolder_base=['/data/users/',Current_User];
+    % case {"accre","panfs"}
+    %     Current_System="ACCRE";
+    %     inputfolder_base=['/home/',Current_User];
+    %     outputfolder_base=['/home/',Current_User];
+    %     temporaryfolder_base=['/data/womelsdorf_lab/',Current_User];
+    %     % temporaryfolder_base=['/nobackup/user/',Current_User];
+    % modified accre case to pull from /data/womelsdorf_lab and to store
+    % processed data there
     case {"accre","panfs"}
         Current_System="ACCRE";
-        inputfolder_base=['/home/',Current_User];
-        outputfolder_base=['/home/',Current_User];
-        temporaryfolder_base=['/data/womelsdorf_lab/',Current_User];
-        % temporaryfolder_base=['/nobackup/user/',Current_User];
+        inputfolder_base='/data/womelsdorf_lab/poggigp';
+        outputfolder_base='/data/womelsdorf_lab/poggigp/processed_data';
+        temporaryfolder_base='/data/womelsdorf_lab/poggigp/processed_data';
+    % print root directory if cases aren't entered for debugging
+    otherwise
+        error("Unrecognized Root_Directory='%s'. Please add a case for this system.", Root_Directory);
 end
 
 end
