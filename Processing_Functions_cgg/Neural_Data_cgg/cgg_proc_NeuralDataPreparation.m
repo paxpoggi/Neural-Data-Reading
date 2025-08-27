@@ -23,12 +23,14 @@ end
 % Select a folder that has the highest session information e.g.
 % 'Fr_Probe_02_22-05-09_009_01'
 if isfunction
-inputfolder = CheckVararginPairs('inputfolder', '', varargin{:});
-if isempty(inputfolder)
-    inputfolder = uigetdir(['/Volumes/','Womelsdorf Lab','/DATA_neural'], 'Choose the input data folder');
-end
+    inputfolder = CheckVararginPairs('inputfolder', '', varargin{:});
 else
-    inputfolder = uigetdir(['/Volumes/','Womelsdorf Lab','/DATA_neural'], 'Choose the input data folder');
+    inputfolder = '';
+end
+
+if isempty(inputfolder)
+    inputfolder = uigetdir('/Volumes/Womelsdorf Lab/DATA_neural', ...
+                           'Choose the input data folder');
 end
 % This gets the Session name and the Experiment name
 % E.G. Session -> 'Fr_Probe_02_22-05-09_009_01'
