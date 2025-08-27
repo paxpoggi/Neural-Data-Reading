@@ -62,6 +62,24 @@ switch SessionName
         probe_area={first_probe_area,second_probe_area,...
             third_probe_area,fourth_probe_area,fifth_probe_area,...
             sixth_probe_area};
+    case 'Ig_VU595_03_2023-03-08_A'
+        first_probe=1:128;
+        second_probe=129:256;  
+        third_probe=257:384;  
+        fourth_probe=385:512;  
+        fifth_probe=513:640;  
+        sixth_probe=641:768;  
+        probe_selection={first_probe,second_probe,third_probe,...
+            fourth_probe,fifth_probe,sixth_probe};
+        first_probe_area='ACC_001';
+        second_probe_area='ACC_002';
+        third_probe_area='PFC_001';
+        fourth_probe_area='PFC_002';
+        fifth_probe_area='CD_001';
+        sixth_probe_area='CD_002';
+        probe_area={first_probe_area,second_probe_area,...
+            third_probe_area,fourth_probe_area,fifth_probe_area,...
+            sixth_probe_area};
     case 'Wo_Probe_01_23-02-13_003_01'
         first_probe=65:128;
         second_probe=1:64;
