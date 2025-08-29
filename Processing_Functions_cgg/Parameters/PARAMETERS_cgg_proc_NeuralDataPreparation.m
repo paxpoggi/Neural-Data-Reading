@@ -93,7 +93,7 @@ clustering_trial_count=30;
 % will not have an effect if all the contacts for a probe are selected
 % since they will all be remapped together.
 
-probe_mapping='mapped'; %unmapped, mapped, recorded
+probe_mapping='recorded'; %unmapped, mapped, recorded
 
 SessionName = CheckVararginPairs('SessionName', 'None', varargin{:});
 
@@ -112,7 +112,7 @@ SessionName = CheckVararginPairs('SessionName', 'None', varargin{:});
 % value is set to true it will still remain correct. The channel mapping
 % that is used is the one with "*correct*" or the first channel mapping
 % listed.
-want_channel_remap = true;
+want_channel_remap = false;
 
 % This boolean determines whether the artifact rejection UI will appear.
 % This uses the FieldTrip function "ft_rejectvisual". For this function it

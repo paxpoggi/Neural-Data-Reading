@@ -36,8 +36,18 @@ TrialVariables_file_name=[cfg_v2.outdatadir.Experiment.Session.Trial_Information
 %%
 if ~(exist(TrialVariables_file_name,'file')) 
 
-Session_struct = dir(fullfile(inputfolder,'Session*'));
-USE_Session_Name = Session_struct.name;
+% old session structure, does not work for Igor but works for frey 
+% Session_struct = dir(fullfile(inputfolder,'Session*'));
+% USE_Session_Name = Session_struct.name;
+
+% new session structure for Igor
+[~, SessionName] = fileparts(inputfolder);
+Session_struct = dir(fullfile(inputfolder, '*_BHV'));
+% disp(SessionName)
+USE_Session_Name = [SessionName '_BHV'];
+
+% disp(USE_Session_Name)
+
 
 if length(Session_struct)>1
     disp(['!!! Please make sure there is only one USE session in the '...

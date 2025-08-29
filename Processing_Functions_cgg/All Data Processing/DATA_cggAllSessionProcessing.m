@@ -7,7 +7,6 @@ clc; clear; close all;
 Epoch='Decision';
 
 %%
-
 for sidx=1:length(cfg)
     
     inputfolder=cfg(sidx).inputfolder;

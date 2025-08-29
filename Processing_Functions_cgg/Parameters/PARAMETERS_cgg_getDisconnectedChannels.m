@@ -9,7 +9,8 @@ End_Group=35;
 NumReplicates=10; %10
 InDistance='sqeuclidean';
 NumIterations=20;
-Disconnected_Channels_GT=[30,60:64];
+% Disconnected_Channels_GT=[30,60:64];
+Disconnected_Channels_GT=[];
 Disconnected_Threshold=0.5;
 
 w = whos;

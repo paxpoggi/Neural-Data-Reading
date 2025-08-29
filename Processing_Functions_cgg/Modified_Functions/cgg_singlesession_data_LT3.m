@@ -37,7 +37,9 @@ frameData = frameData.frameData;
 
 
 % Block feature
-BlkDef_name = dir([main_path filesep 'RuntimeData' filesep 'SessionSettings' filesep 'FDF03*.*']);
+% BlkDef_name = dir([main_path filesep 'RuntimeData' filesep 'SessionSettings' filesep 'FDF03*.*']);
+% for igor, that block name file schema doesn't work so use this one:
+BlkDef_name = dir([main_path filesep 'RuntimeData' filesep 'SessionSettings' filesep 'FL2D*.*']);
 BlkDef_file = BlkDef_name.name;
 BlkDef_file = split(BlkDef_file ,"_");
 
