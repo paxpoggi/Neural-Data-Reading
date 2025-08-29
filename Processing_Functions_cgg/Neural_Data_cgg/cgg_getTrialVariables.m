@@ -4,7 +4,8 @@ function [trialVariables] = cgg_getTrialVariables(varargin)
 %%
 
 isfunction=exist('varargin','var');
-
+monkey_name = CheckVararginPairs('monkey_name', 'Frey', varargin{:});
+ExperimentName = CheckVararginPairs('ExperimentName', 'IDED_DBC_AH_AN', varargin{:});
 if isfunction
 [cfg] = cgg_generateNeuralDataFoldersTopLevel(varargin{:});
 [cfg_v2] = cgg_generateNeuralDataFoldersTopLevel_v2(varargin{:});
@@ -33,27 +34,56 @@ outdatadir=cfg.outdatadir;
 
 TrialVariables_file_name=[cfg_v2.outdatadir.Experiment.Session.Trial_Information.path filesep 'TrialVariables_', cfg.SessionName, '.mat'];
 
-%%
 if ~(exist(TrialVariables_file_name,'file')) 
 
-% old session structure, does not work for Igor but works for frey 
-% Session_struct = dir(fullfile(inputfolder,'Session*'));
-% USE_Session_Name = Session_struct.name;
+    %% add in cases for woton and frey vs Igor
+    switch ExperimentName
+        
+        case 'Wotan_FLToken_Probe_01'
+            
+            Session_struct = dir(fullfile(inputfolder,'Session*'));
+            USE_Session_Name = Session_struct.name;
+        
+            if length(Session_struct)>1
+                disp(['!!! Please make sure there is only one USE session in the '...
+                'recording folder']);
+                disp('!!! The wrong session may be used to identify trial variables');
+            end
 
-% new session structure for Igor
-[~, SessionName] = fileparts(inputfolder);
-Session_struct = dir(fullfile(inputfolder, '*_BHV'));
-% disp(SessionName)
-USE_Session_Name = [SessionName '_BHV'];
+        case 'Frey_FLToken_Probe_02'
+            
+            Session_struct = dir(fullfile(inputfolder,'Session*'));
+            USE_Session_Name = Session_struct.name;
+        
+            if length(Session_struct)>1
+                disp(['!!! Please make sure there is only one USE session in the '...
+                'recording folder']);
+                disp('!!! The wrong session may be used to identify trial variables');
+            end
 
-% disp(USE_Session_Name)
-
-
-if length(Session_struct)>1
-    disp(['!!! Please make sure there is only one USE session in the '...
-    'recording folder']);
-    disp('!!! The wrong session may be used to identify trial variables');
-end
+        case 'Frey_FLToken_Probe_03'
+            
+            Session_struct = dir(fullfile(inputfolder,'Session*'));
+            USE_Session_Name = Session_struct.name;
+        
+            if length(Session_struct)>1
+                disp(['!!! Please make sure there is only one USE session in the '...
+                'recording folder']);
+                disp('!!! The wrong session may be used to identify trial variables');
+            end
+        
+        case 'IDED_DBC_AH_AN'
+            [~, SessionName]=fileparts(inputfolder);
+            Session_struct = dir(fullfile(inputfolder, '*_BHV'));
+            USE_Session_Name = [SessionName '_BHV'];
+            if length(Session_struct)>1
+                            disp(['!!! Please make sure there is only one USE session in the '...
+                            'recording folder']);
+                            disp('!!! The wrong session may be used to identify trial variables');
+            end
+        otherwise
+            warning('Unknown monkey name: %s.', monkey_name)
+    end
 
 [Path_Experiment,Session_Name,~]=fileparts(inputfolder);
 
@@ -66,17 +96,63 @@ outdatadir_LT=cfg.outdatadir_SessionName;
 gazeArgs='TX300';
 exptType='FLU';
 
+
+
+% --- Sanity check: make sure we're reading from the INPUT tree
+% ---debugging code 
+td = fullfile(dataFolder, 'RuntimeData', 'TrialData');
+fprintf('DEBUG dataFolder = %s\n', dataFolder);
+fprintf('DEBUG trialData path = %s\n', td);
+
+if ~startsWith(dataFolder, inputfolder)
+    error('dataFolder points to the output tree! dataFolder=%s  inputfolder=%s', dataFolder, inputfolder);
+end
+
+if ~exist(td, 'dir')
+    error('Expected TrialData dir does not exist: %s', td);
+end
+
+listing = dir(fullfile(td, '*TrialData.txt'));
+fprintf('DEBUG found %d TrialData files\n', numel(listing));
+for k = 1:min(5, numel(listing))
+    fprintf('   %s\n', fullfile(listing(k).folder, listing(k).name));
+end
+
+if isempty(listing)
+    error('No *TrialData.txt in %s. (Check you are pointing at INPUT, not OUTPUT.)', td);
+end
+%% debugging code
+
 [trialData, blockData] = ProcessSingleSessionData_FLU('exptType',exptType,'gazeArgs',gazeArgs,'outdatadir',outdatadir_LT,'dataFolder',dataFolder);
 
 folder_name = Session_Name;
 session_file = USE_Session_Name;
 data_path = Path_Experiment;
-Area = 1; %1 = ACC, 2 = CD
-MnkID = 1; %1 = Frey
+% Area = 1; %1 = ACC, 2 = CD
+switch monkey_name
+    case 'Frey', MnkID=1;
+    case 'Wotan', MnkID=2;
+    case 'Igor', MnkID=3;
+end
+% MnkID = 1; %1 = Frey
 
 proccessed_path = cfg.outdatadir_SessionName;
 
-[TrialDATA, BlockDATA]  = cgg_singlesession_data_LT3(folder_name, session_file, data_path,proccessed_path, Area, MnkID);
+[TrialDATA, BlockDATA]  = cgg_singlesession_data_LT3(folder_name, session_file, data_path,proccessed_path, NaN, MnkID, ExperimentName);
+% Save behavior once per session (area-agnostic)
+sessTrialPath = fullfile(cfg_v2.outdatadir.Experiment.Session.Trial_Information.path, ...
+                         ['TrialDATA_session_' cfg.SessionName '.mat']);
+sessBlockPath = fullfile(cfg_v2.outdatadir.Experiment.Session.Trial_Information.path, ...
+                         ['BlockDATA_session_' cfg.SessionName '.mat']);
+try
+    save(sessTrialPath, 'TrialDATA', '-v7.3');
+    save(sessBlockPath, 'BlockDATA', '-v7.3');
+catch ME
+     warning(ME.identifier, ...
+        'Could not save per-probe Trial/Block data for %s: %s', ...
+        this_probe_area, ME.message);
+end
+
 %%
 trialDefsFolder=[proccessed_path, filesep, 'ProcessedData', filesep, 'TrialDefs.mat'];
 load(trialDefsFolder);
@@ -173,4 +249,3 @@ trialVariables=m_TrialVariables.trialVariables;
 end
 
 end
-

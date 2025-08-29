@@ -11,8 +11,10 @@ for sidx=1:length(cfg)
     
     inputfolder=cfg(sidx).inputfolder;
     outdatadir=cfg(sidx).outdatadir;
+    ExperimentName=cfg(sidx).ExperimentName;
+    monkey_name=cfg(sidx).Monkey_Name;
 
 cgg_procFullTrialPreparation_v3(...
-    'inputfolder',cfg(sidx).inputfolder,'outdatadir',cfg(sidx).outdatadir,'Epoch',Epoch);
+    'inputfolder',cfg(sidx).inputfolder,'outdatadir',cfg(sidx).outdatadir,'Epoch',Epoch, 'ExperimentName', ExperimentName, 'monkey_name', monkey_name);
 
 end
