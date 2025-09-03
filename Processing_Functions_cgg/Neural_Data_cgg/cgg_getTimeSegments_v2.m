@@ -117,7 +117,7 @@ fprintf(Current_Message);
 
 %%
 
-parfor tidx=1:NumTrials
+parfor (tidx=1:NumTrials, 12)
    this_trial_index=rectrialdefs(tidx,8);
    this_trial_Type_file_name=...
        sprintf([outdatadir_TimeInformation_Type filesep Activity_Type '_Trial_%d_Time.mat'],this_trial_index);
