@@ -70,28 +70,37 @@ outdatadir=cfg.outdatadir;
 % ---- Load (or create) session-level behavior once ----
 [cfg_v2] = cgg_generateNeuralDataFoldersTopLevel_v2('inputfolder',inputfolder,'outdatadir',outdatadir);
 
-sessTrialPath = fullfile(cfg_v2.outdatadir.Experiment.Session.Trial_Information.path, ...
-                         ['TrialDATA_session_' cfg.SessionName '.mat']);
-sessBlockPath = fullfile(cfg_v2.outdatadir.Experiment.Session.Trial_Information.path, ...
-                         ['BlockDATA_session_' cfg.SessionName '.mat']);
+
+sessInfoDir   = cfg_v2.outdatadir.Experiment.Session.Trial_Information.path;
+sessTrialPath = fullfile(sessInfoDir, ['TrialDATA_session_'  cfg.SessionName '.mat']);
+sessBlockPath = fullfile(sessInfoDir, ['BlockDATA_session_'  cfg.SessionName '.mat']);
+trialVarsPath = fullfile(sessInfoDir, ['TrialVariables_'      cfg.SessionName '.mat']);
 
 TrialDATA_session = [];
 BlockDATA_session = [];
+trialVariables    = [];
 
-if exist(sessTrialPath,'file') && exist(sessBlockPath,'file')
-    S1 = load(sessTrialPath);  TrialDATA_session  = S1.TrialDATA;
-    S2 = load(sessBlockPath);  BlockDATA_session  = S2.BlockDATA;
-else
-    % Force creation (side effect: saves the session-level files to those paths)
+% If any of the 3 session files are missing, create them once
+if ~(exist(sessTrialPath,'file') && exist(sessBlockPath,'file') && exist(trialVarsPath,'file'))
+    % This call returns trialVariables and (as a side-effect) saves all three files
     trialVariables = cgg_getTrialVariables( ...
         'inputfolder', inputfolder, ...
         'outdatadir',  outdatadir, ...
-        'monkey_name', monkey_name,...
+        'monkey_name', monkey_name, ...
         'ExperimentName', ExperimentName);
-    % Now load them
-    S1 = load(sessTrialPath);  TrialDATA_session  = S1.TrialDATA;
-    S2 = load(sessBlockPath);  BlockDATA_session  = S2.BlockDATA;
 end
+
+% Now load all three from disk (robust even if they already existed)
+S1 = load(sessTrialPath);   TrialDATA_session  = S1.TrialDATA;
+S2 = load(sessBlockPath);   BlockDATA_session  = S2.BlockDATA;
+S3 = load(trialVarsPath);   trialVariables     = S3.trialVariables;
+
+assert(exist(sessTrialPath,'file')==2 && exist(sessBlockPath,'file')==2 && exist(trialVarsPath,'file')==2, ...
+    'Missing session files:\n%s\n%s\n%s', sessTrialPath, sessBlockPath, trialVarsPath);
+
+assert(exist('trialVariables','var')==1 && isstruct(trialVariables), 'trialVariables not loaded as struct');
+assert(isfield(trialVariables,'TrialNumber'), ...
+    'trialVariables missing TrialNumber. Fields are: %s', strjoin(fieldnames(trialVariables),', '));
 
 
 Session_Start_Message=sprintf('*** Starting Processing Session: %s',cfg.SessionName);
@@ -127,14 +136,17 @@ end
     'Frame_Event_Window_Before',Window_Before_Baseline,...
     'Frame_Event_Window_After',Window_After_Baseline);
 
-% ---- Session-level trial variables (compute once, reuse per probe) ----
-% trialVariables = cgg_getTrialVariables( ...
-%     'inputfolder', inputfolder, ...
-%     'outdatadir',  outdatadir, ...
-%     'monkey_name', monkey_name,...
-%     'ExperimentName', ExperimentName);
-trialVariables = TrialDATA_session;
+% ---- Session-level trial variables (compute once, reuse per probe) from above ----
+
 TrialVariableTrialNumber = [trialVariables(:).TrialNumber];
+
+%% Sanity checks (add here, before segmentation/criteria)
+assert(~isempty(trialVariables) && isstruct(trialVariables), ...
+    'trialVariables not loaded properly');
+assert(isfield(trialVariables,'TrialNumber'), ...
+    'trialVariables missing TrialNumber. Fields are: %s', strjoin(fieldnames(trialVariables),', '));
+assert(numel(TrialVariableTrialNumber) == numel(trialVariables), ...
+    'Mismatch between TrialVariableTrialNumber and trialVariables length');
 
 %% Iterate through all Areas
 
@@ -297,7 +309,7 @@ Output(2).Significant_Channels=Significant_Channels;
 Output(3).Significant_Channels=NotSignificant_Channels;
 
 %% 
-SizeIssue = cgg_saveTrialEpochs(Output,this_probe_area,trialVariables,Epoch,Probe_Order,cfg_directories,cfg_param);
+SizeIssue = pgp_saveTrialEpochs(Output,this_probe_area,trialVariables,Epoch,Probe_Order,cfg_directories,cfg_param);
 
 if SizeIssue
     SessionIssue=true;
