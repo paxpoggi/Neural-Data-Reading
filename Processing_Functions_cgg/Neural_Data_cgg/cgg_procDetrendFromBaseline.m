@@ -1,6 +1,9 @@
-function [Detrend_Data,Detrend_Baseline] = cgg_procDetrendFromBaseline(InData,InBaseline,TrialNumbers_Data,TrialNumbers_Baseline)
+function [Detrend_Data,Detrend_Baseline] = cgg_procDetrendFromBaseline(InData,InBaseline,TrialNumbers_Data,TrialNumbers_Baseline,flatten_only)
 %UNTITLED3 Summary of this function goes here
 %   Detailed explanation goes here
+
+assert(islogical(flatten_only) && isscalar(flatten_only), ...
+    'flatten_only must be a logical scalar (true/false).');
 
 IsCell_Data=iscell(InData);
 IsCell_Baseline=iscell(InBaseline);
@@ -39,24 +42,39 @@ this_y=diag(diag(this_Baseline_Mean));
 
 [this_Coefficients,~,~,~,~] = regress(this_y,this_x);
 
-this_Baseline_Fit=this_x*this_Coefficients;
+% this_Coefficients = [slope; intercept]
+slope = this_Coefficients(1);
+intercept = this_Coefficients(2);
+
+% this_Baseline_Fit=this_x*this_Coefficients;
 
 for tidx=1:length(TrialNumbers_Baseline)
+    if flatten_only
+        adj_term = slope * TrialNumbers_Baseline(tidx); % remove trend only
+    else 
+        adj_term = slope * TrialNumbers_Baseline(tidx) + intercept; % full fit
+    end
+
     if IsCell_Baseline
-        Detrend_Baseline{tidx}(sel_channel,:)=InBaseline{tidx}(sel_channel,:)-this_Baseline_Fit(tidx);
+        Detrend_Baseline{tidx}(sel_channel,:)=InBaseline{tidx}(sel_channel,:)- adj_term;
     else
-        Detrend_Baseline(sel_channel,:,tidx)=InBaseline(sel_channel,:,tidx)-this_Baseline_Fit(tidx);
+        Detrend_Baseline(sel_channel,:,tidx)=InBaseline(sel_channel,:,tidx)- adj_term;
     end
 end
 
 for tidx=1:length(TrialNumbers_Data)
         this_TrialNumberData=TrialNumbers_Data(tidx);
-        this_Baseline_Fit = [this_TrialNumberData,1]*this_Coefficients;
-    if IsCell_Data
-        Detrend_Data{tidx}(sel_channel,:)=InData{tidx}(sel_channel,:)-this_Baseline_Fit;
-    else
-        Detrend_Data(sel_channel,:,tidx)=InData(sel_channel,:,tidx)-this_Baseline_Fit;
-    end  
+        if flatten_only
+            adj_term = slope * this_TrialNumberData;
+        else
+            adj_term = slope * this_TrialNumberData + intercept;
+        % this_Baseline_Fit = [this_TrialNumberData,1]*this_Coefficients;
+        end
+        if IsCell_Data
+            Detrend_Data{tidx}(sel_channel,:)=InData{tidx}(sel_channel,:)-adj_term;
+        else
+            Detrend_Data(sel_channel,:,tidx)=InData(sel_channel,:,tidx)-adj_term;
+        end  
 end
 
 end

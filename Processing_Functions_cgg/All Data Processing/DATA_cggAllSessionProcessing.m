@@ -15,6 +15,6 @@ for sidx=1:length(cfg)
     monkey_name=cfg(sidx).Monkey_Name;
 
 cgg_procFullTrialPreparation_v3(...
-    'inputfolder',cfg(sidx).inputfolder,'outdatadir',cfg(sidx).outdatadir,'Epoch',Epoch, 'ExperimentName', ExperimentName, 'monkey_name', monkey_name);
+    'inputfolder',cfg(sidx).inputfolder,'outdatadir',cfg(sidx).outdatadir,'Epoch',Epoch, 'ExperimentName', ExperimentName, 'monkey_name', monkey_name, 'detrend_flatten_only', true, 'do_zscore', false);
 
 end

@@ -2,9 +2,11 @@ function [Mean_Norm_InData,Mean_Norm_InBaseline,...
     STD_ERROR_Norm_InData,STD_ERROR_Norm_InBaseline,Norm_InData,...
     Norm_InBaseline] = cgg_procTrialNormalization_v2(InData,...
     InBaseline,FullBaseline,TrialNumbers_Data,TrialNumbers_Baseline,...
-    TrialNumbers_FullBaseline)
+    TrialNumbers_FullBaseline,do_zscore)
 %CGG_PROCTRIALNORMALIZATION Summary of this function goes here
 %   Detailed explanation goes here
+assert(islogical(do_zscore) && isscalar(do_zscore), ...
+    'do_zscore must be a logical scalar (true/false).');
 
 IsCell_Data=iscell(InData);
 IsCell_Baseline=iscell(InBaseline);
@@ -37,56 +39,73 @@ else
     end
 end
 
+% ---- InData normalization ------
 if IsCell_Data
-for tidx=1:length(TrialNumbers_Data)
-    this_TrialNumberData=TrialNumbers_Data(tidx);
-    this_TrialNumbers_FullBaseline_IDX=TrialNumbers_FullBaseline==this_TrialNumberData;
-    
-    this_Mean_FullBaseline=Mean_FullBaseline(:,this_TrialNumbers_FullBaseline_IDX);
-    this_STD_FullBaseline=STD_FullBaseline(:,this_TrialNumbers_FullBaseline_IDX);
-    
-    if all(STD_FullBaseline==0)
-    Norm_InData{tidx}=(InData{tidx}-this_Mean_FullBaseline);    
-    else
-    Norm_InData{tidx}=(InData{tidx}-this_Mean_FullBaseline)./this_STD_FullBaseline;
+    for tidx=1:length(TrialNumbers_Data)
+        this_TrialNumberData=TrialNumbers_Data(tidx);
+        this_idx=TrialNumbers_FullBaseline==this_TrialNumberData;
+        this_mu=Mean_FullBaseline(:,this_idx);
+        this_sd=STD_FullBaseline(:,this_idx);
+        
+        if ~do_zscore % if we don't want to zscore
+            Norm_InData{tidx}=(InData{tidx}); % pass the input data without normalizing
+        else
+            if all(this_sd==0)
+            Norm_InData{tidx}=(InData{tidx}-this_mu);    
+            else
+            Norm_InData{tidx}=(InData{tidx}-this_mu)./this_sd;
+            end
+        end
     end
-end
-Mean_Norm_InData=NaN;
-STD_ERROR_Norm_InData=NaN;
+    Mean_Norm_InData=NaN;
+    STD_ERROR_Norm_InData=NaN;
 else
-if all(STD_FullBaseline==0)
-Norm_InData=(InData-Mean_FullBaseline);
-else
-Norm_InData=(InData-Mean_FullBaseline)./STD_FullBaseline;
-end
-Mean_Norm_InData=mean(Norm_InData,3);
-STD_ERROR_Norm_InData=std(Norm_InData,0,3)/sqrt(Trial_Counter_Data);
+    if ~do_zscore
+        Norm_InData = InData;
+    else
+        if all(STD_FullBaseline==0)
+            Norm_InData=(InData-Mean_FullBaseline);
+        else
+            Norm_InData=(InData-Mean_FullBaseline)./STD_FullBaseline;
+        end
+    end
+    Mean_Norm_InData=mean(Norm_InData,3);
+    STD_ERROR_Norm_InData=std(Norm_InData,0,3)/sqrt(Trial_Counter_Data);
 end
 
+%------ InBaseline normalization ------
+    
 if IsCell_Baseline
-for tidx=1:length(TrialNumbers_Baseline)
-    this_TrialNumberBaseline=TrialNumbers_Baseline(tidx);
-    this_TrialNumbers_FullBaseline_IDX=TrialNumbers_FullBaseline==this_TrialNumberBaseline;
-    
-    this_Mean_FullBaseline=Mean_FullBaseline(:,this_TrialNumbers_FullBaseline_IDX);
-    this_STD_FullBaseline=STD_FullBaseline(:,this_TrialNumbers_FullBaseline_IDX);
-    
-    if all(STD_FullBaseline==0)
-    Norm_InBaseline{tidx}=(InBaseline{tidx}-this_Mean_FullBaseline);    
-    else
-    Norm_InBaseline{tidx}=(InBaseline{tidx}-this_Mean_FullBaseline)./this_STD_FullBaseline;
+    for tidx = 1:length(TrialNumbers_Baseline)
+        tr  = TrialNumbers_Baseline(tidx);
+        idx = (TrialNumbers_FullBaseline == tr);
+        mu  = Mean_FullBaseline(:, idx);
+        sd  = STD_FullBaseline(:,  idx);
+
+        if ~do_zscore
+            Norm_InBaseline{tidx} = InBaseline{tidx};             
+        else
+            if all(sd == 0)
+                Norm_InBaseline{tidx} = (InBaseline{tidx} - mu);
+            else
+                Norm_InBaseline{tidx} = (InBaseline{tidx} - mu) ./ sd;
+            end
+        end
     end
-end
-Mean_Norm_InBaseline=NaN;
-STD_ERROR_Norm_InBaseline=NaN;
+    Mean_Norm_InBaseline      = NaN;
+    STD_ERROR_Norm_InBaseline = NaN;
 else
-if all(STD_FullBaseline==0)
-Norm_InBaseline=(InBaseline-Mean_FullBaseline);
-else
-Norm_InBaseline=(InBaseline-Mean_FullBaseline)./STD_FullBaseline;
-end
-Mean_Norm_InBaseline=mean(Norm_InBaseline,3);
-STD_ERROR_Norm_InBaseline=std(InBaseline,0,3)/sqrt(Trial_Counter_Baseline);
+    if ~do_zscore                                                
+        Norm_InBaseline = InBaseline;                             % pass-through
+    else
+        if all(STD_FullBaseline == 0)
+            Norm_InBaseline = (InBaseline - Mean_FullBaseline);
+        else
+            Norm_InBaseline = (InBaseline - Mean_FullBaseline) ./ STD_FullBaseline;
+        end
+    end
+    Mean_Norm_InBaseline      = mean(Norm_InBaseline, 3);
+    STD_ERROR_Norm_InBaseline = std( Norm_InBaseline, 0, 3) / sqrt(Trial_Counter_Baseline); % <-- use Norm_
 end
 
 end

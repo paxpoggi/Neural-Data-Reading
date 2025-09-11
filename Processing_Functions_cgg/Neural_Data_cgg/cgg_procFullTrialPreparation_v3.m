@@ -11,6 +11,10 @@ Epoch = CheckVararginPairs('Epoch', 'Decision', varargin{:});
 
 cfg_param = PARAMETERS_cgg_procFullTrialPreparation_v2(Epoch);
 
+flatten_only = CheckVararginPairs('detrend_flatten_only', false, varargin{:});
+
+do_zscore = CheckVararginPairs('do_zscore', true, varargin{:});
+
 TrialDuration_Minimum=cfg_param.TrialDuration_Minimum;
 % Count_Sel_Trial=cfg_param.Count_Sel_Trial;
 
@@ -215,8 +219,8 @@ SamplingFrequency=mode(SF_Data);
     'outdatadir',outdatadir,'SmoothType',SmoothType,'PassBand',PassBand,'SamplingFrequency',SamplingFrequency);
 
 %% Detrend the data according to the baseline period
-
-[Detrend_Data,Detrend_Baseline] = cgg_procDetrendFromBaseline(Segmented_Data,Segmented_Baseline,TrialNumbers_Data,TrialNumbers_Baseline);
+% added in option to not subtract y intercept and only flatten
+[Detrend_Data,Detrend_Baseline] = cgg_procDetrendFromBaseline(Segmented_Data,Segmented_Baseline,TrialNumbers_Data,TrialNumbers_Baseline,flatten_only);
 
 % %% Get the trial variables (this has been adjusted to before the probe
 % loop so that it is only computed once, probe area is added during loop)
@@ -236,11 +240,11 @@ FullBaseline=MatchBaseline;
 MatchTrialNumber_FullBaseline=MatchTrialNumber_Baseline;
 
 %% Normalize the baseline and data according to the baseline period
-
+% added in option to skip zscore normalization
 [Mean_Norm_Data,Mean_Norm_Baseline,...
     STD_ERROR_Norm_Data,STD_ERROR_Norm_Baseline,...
     Norm_Data,Norm_Baseline] = ...
-    cgg_procTrialNormalization_v2(MatchData,MatchBaseline,FullBaseline,MatchTrialNumber_Data,MatchTrialNumber_Baseline,MatchTrialNumber_FullBaseline);
+    cgg_procTrialNormalization_v2(MatchData,MatchBaseline,FullBaseline,MatchTrialNumber_Data,MatchTrialNumber_Baseline,MatchTrialNumber_FullBaseline,do_zscore);
 
 %% Regression
 
@@ -270,12 +274,18 @@ Output(1).STD_Error={['Standard Error of the mean of the signal source '...
 Output(2).STD_Error=STD_ERROR_Norm_Data;
 Output(3).STD_Error=STD_ERROR_Norm_Baseline;
 
-Output(1).Trials={'All the trials for the data source';...
-    ['Each channel is baseline z-scored by the mean and standard '...
-    'deviation that come from the FullBaseline. This FullBaseline '...
-    'excludes aborted trials and trials longer than specified. The '...
-    'activity of all the trials for all time points of a channel are '...
-    'used to calculate the mean and standard deviations for normalizing']};
+if do_zscore
+    Output(1).Trials={'All the trials for the data source';...
+        ['Each channel is baseline z-scored by the mean and standard '...
+        'deviation that come from the FullBaseline. This FullBaseline '...
+        'excludes aborted trials and trials longer than specified. The '...
+        'activity of all the trials for all time points of a channel are '...
+        'used to calculate the mean and standard deviations for normalizing']};
+else
+    Output(1).Trials={'All the trials for the data source'; ...
+        ['Trials are detrended relative to baseline (trend flattened). ' ...
+         'No baseline z-scoring was applied (raw units after detrend).']};
+end
 Output(2).Trials=Norm_Data;
 Output(3).Trials=Norm_Baseline;
 
