@@ -71,7 +71,7 @@ InData_LFP=cell2mat(InData_LFP);
 InData={InData_LFP,InData_WB};
 
 %%
-cfg_disconnected = PARAMETERS_cgg_getDisconnectedChannels;
+cfg_disconnected = PARAMETERS_cgg_getDisconnectedChannels('NumChannels',NumChannels);
 
 Start_Group=cfg_disconnected.Start_Group;
 End_Group=cfg_disconnected.End_Group;
