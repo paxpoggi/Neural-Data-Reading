@@ -139,8 +139,8 @@ keep_wideband=false;
 % the raw wideband and notch filtered. Regular wideband is rereferenced as
 % well
 
-keep_raw = true;
-keep_notch = true;
+keep_raw = false;
+keep_notch = false;
 
 %%
 
