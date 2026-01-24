@@ -246,6 +246,12 @@ MatchTrialNumber_FullBaseline=MatchTrialNumber_Baseline;
     Norm_Data,Norm_Baseline] = ...
     cgg_procTrialNormalization_v2(MatchData,MatchBaseline,FullBaseline,MatchTrialNumber_Data,MatchTrialNumber_Baseline,MatchTrialNumber_FullBaseline,do_zscore);
 
+if iscell(FullBaseline)
+    disp('✅ Per-trial baseline (cell input) → trial-specific μ and σ used for z-scoring.');
+else
+    disp('⚠️ Numeric baseline (array input) → one grand μ and σ used for all trials.');
+end
+
 %% Regression
 
 TrialNumbers=MatchTrialNumber_Data;
