@@ -140,7 +140,7 @@ keep_wideband=true;
 % well
 
 keep_raw = false;
-keep_notch = true;
+keep_notch = false;
 
 %%
 

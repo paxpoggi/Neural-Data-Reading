@@ -64,8 +64,8 @@ switch Root_Directory
     case {'accre','panfs'}
         Current_System = 'ACCRE';
         inputfolder_base='/data/womelsdorf_lab/poggigp';
-        outputfolder_base='/data/womelsdorf_lab/poggigp/processed_data';
-        temporaryfolder_base='/data/womelsdorf_lab/poggigp/processed_data';
+        outputfolder_base='/data/womelsdorf_lab/kazezew/processed_data';
+        temporaryfolder_base='/data/womelsdorf_lab/kazezew/processed_data';
 end
 
 end
