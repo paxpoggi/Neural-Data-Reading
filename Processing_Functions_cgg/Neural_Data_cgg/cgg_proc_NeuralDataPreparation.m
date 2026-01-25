@@ -230,9 +230,25 @@ nlFT_setMemChans(6);
 % otherwise it will use the intan recording data
 have_openephys = ~isempty(folders_openephys);
 if have_openephys
-  folder_record = folders_openephys{1};
+    % Handle multiple record nodes - find the one with actual data
+    % (Sometimes a session has empty record nodes from false starts)
+    folder_record = '';
+    for k = 1:numel(folders_openephys)
+        test_ttl = fullfile(folders_openephys{k}, ...
+            'events','Intan_Rec._Controller-100.0','TTL_1','timestamps.npy');
+        if exist(test_ttl,'file')
+            info = dir(test_ttl);
+            if info.bytes > 1000   % non-empty TTL file
+                folder_record = folders_openephys{k};
+                break
+            end
+        end
+    end
+    if isempty(folder_record)
+        error('No OpenEphys recording folder with non-empty TTL events found.');
+    end
 else
-  folder_record = folders_intanrec{1};
+    folder_record = folders_intanrec{1};
 end
 
 % Check for stimulator data

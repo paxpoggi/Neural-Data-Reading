@@ -133,7 +133,7 @@ want_Spike = false;
 % will GREATLY reduce the amount of data that has to be saved to hard
 % drive.
 
-keep_wideband=true;
+keep_wideband=false;
 
 % For visualizing processing steps this boolean determines whether to save
 % the raw wideband and notch filtered. Regular wideband is rereferenced as
