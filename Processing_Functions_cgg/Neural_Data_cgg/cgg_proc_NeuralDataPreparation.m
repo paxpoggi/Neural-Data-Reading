@@ -832,14 +832,11 @@ end
 
 
 
-% save(this_trial_wideband_file_name,'this_recdata_wideband');
-
-m = matfile(this_trial_wideband_file_name,'Writable',true);
-m.this_recdata_wideband=this_recdata_wideband;
+% Save wideband data with retry logic for cluster filesystem robustness
+kaa_saveWithRetry(this_trial_wideband_file_name, 'this_recdata_wideband', this_recdata_wideband);
 
 if keep_raw
-m_raw = matfile(this_trial_Raw_file_name,'Writable',true);
-m_raw.this_recdata_wideband=this_recdata_wideband;
+    kaa_saveWithRetry(this_trial_Raw_file_name, 'this_recdata_wideband', this_recdata_wideband);
 end
 
     end
