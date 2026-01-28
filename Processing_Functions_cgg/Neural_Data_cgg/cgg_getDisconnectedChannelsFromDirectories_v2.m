@@ -1,6 +1,17 @@
 function [Connected_Channels,Disconnected_Channels,is_previously_rereferenced,Debugging_Info] = cgg_getDisconnectedChannelsFromDirectories_v2(Count_Sel_Trial,varargin)
-%UNTITLED2 Summary of this function goes here
-%   Detailed explanation goes here
+%CGG_GETDISCONNECTEDCHANNELSFROMDIRECTORIES_V2 Wrapper to detect disconnected channels
+%
+%   [Connected, Disconnected, is_reref, Debug] = cgg_getDisconnectedChannelsFromDirectories_v2(
+%       Count_Sel_Trial, 'inputfolder', path, 'outdatadir', path,
+%       'Activity_Type', type, 'probe_area', area, 'SessionName', name)
+%
+%   Parameters:
+%       Count_Sel_Trial - Number of trials to sample for analysis
+%       inputfolder     - Input data folder path
+%       outdatadir      - Output data folder path
+%       Activity_Type   - Type of activity data (e.g., 'WideBand')
+%       probe_area      - Probe area name (e.g., 'ACC_001')
+%       SessionName     - (Optional) Session name for session-specific bad channel seeds
 
 
 %%
@@ -20,6 +31,15 @@ if isempty(probe_area)
     definput = {'ACC_001'};
     probe_area = inputdlg(prompt,dlgtitle,dims,definput);
     probe_area = probe_area{1};
+end
+
+% Get SessionName if provided
+if isfunction
+    SessionName = CheckVararginPairs('SessionName', '', varargin{:});
+else
+    if ~(exist('SessionName','var'))
+        SessionName = '';
+    end
 end
 
 if isfunction
@@ -85,6 +105,6 @@ fullfilename = cgg_generateActivityFullFileName('inputfolder',inputfolder,'outda
 % rectrialdeftable=rectrialdeftable.rectrialdeftable;
 % [NumTrials,~]=size(rectrialdeftable);
 
-[Connected_Channels,Disconnected_Channels,is_previously_rereferenced,Debugging_Info] = cgg_getDisconnectedChannels_v3(Trial_Numbers,Count_Sel_Trial,fullfilename);
+[Connected_Channels,Disconnected_Channels,is_previously_rereferenced,Debugging_Info] = cgg_getDisconnectedChannels_v3(Trial_Numbers,Count_Sel_Trial,fullfilename,'SessionName',SessionName,'probe_area',probe_area);
 end
 

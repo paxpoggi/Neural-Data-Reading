@@ -1,6 +1,22 @@
-function [Connected_Channels,Disconnected_Channels,is_previously_rereferenced,Debugging_Info] = cgg_getDisconnectedChannels_v3(Trial_Numbers,Count_Sel_Trial,fullfilename)
-%UNTITLED2 Summary of this function goes here
-%   Detailed explanation goes here
+function [Connected_Channels,Disconnected_Channels,is_previously_rereferenced,Debugging_Info] = cgg_getDisconnectedChannels_v3(Trial_Numbers,Count_Sel_Trial,fullfilename,varargin)
+%CGG_GETDISCONNECTEDCHANNELS_V3 Identify disconnected/bad channels using clustering
+%
+%   [Connected, Disconnected, is_reref, Debug] = cgg_getDisconnectedChannels_v3(
+%       Trial_Numbers, Count_Sel_Trial, fullfilename, 'SessionName', S, 'probe_area', P)
+%
+%   This function identifies disconnected channels by clustering channel
+%   data and finding channels that cluster with known bad channels.
+%
+%   Parameters:
+%       Trial_Numbers   - Array of available trial numbers
+%       Count_Sel_Trial - Number of trials to sample for analysis
+%       fullfilename    - Format string for trial file paths (e.g., 'path/Trial_%d.mat')
+%       SessionName     - (Optional) Session name for session-specific bad channel seeds
+%       probe_area      - (Optional) Probe area name (e.g., 'ACC_001') for area-specific seeds
+
+% Parse optional parameters
+SessionName = CheckVararginPairs('SessionName', '', varargin{:});
+probe_area = CheckVararginPairs('probe_area', '', varargin{:});
 
 NumTrials=length(Trial_Numbers);
 
@@ -58,7 +74,7 @@ is_previously_rereferenced(tidx)=cgg_checkFTRereference(this_recdata);
 
 % InData{tidx}=recdata_lfp.trial{1};
 InData_WB{tidx}=this_recdata.trial{1};
-InData_LFP{tidx}=this_recdata.trial{1};
+InData_LFP{tidx}=this_recdata.trial{1}; % TODO: <-- BUG: Should use recdata_lfp
 
 end
 
@@ -71,7 +87,7 @@ InData_LFP=cell2mat(InData_LFP);
 InData={InData_LFP,InData_WB};
 
 %%
-cfg_disconnected = PARAMETERS_cgg_getDisconnectedChannels('NumChannels',NumChannels);
+cfg_disconnected = PARAMETERS_cgg_getDisconnectedChannels('NumChannels',NumChannels,'SessionName',SessionName,'probe_area',probe_area);
 
 Start_Group=cfg_disconnected.Start_Group;
 End_Group=cfg_disconnected.End_Group;
