@@ -92,6 +92,10 @@ switch SessionName
             case 'ACC_002'
                 Disconnected_Channels_GT = [1, 3, 5, 7, 8, 9, 11, 13, 15, 17, 19];
                 annotation_found = true;
+            otherwise
+                % Probe area not annotated for this session - use defaults
+                annotation_found = false;
+        end
 
     otherwise
         annotation_found = false;
