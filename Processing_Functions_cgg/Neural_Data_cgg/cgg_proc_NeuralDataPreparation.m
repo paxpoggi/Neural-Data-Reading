@@ -746,22 +746,27 @@ nlFT_setMemChans(6);
 
 this_rectrialdeftable = rectrialdeftable(tidx,:);
 this_rectrialdefs = rectrialdefs(tidx,:);
-      
+
+% Initialize stim variables to avoid parfor warning about uninitialized temporaries
+this_stimtrialdeftable = [];
+this_stimtrialdefs = [];
+
 if have_stim
-try
-this_stimtrialdeftable = stimtrialdeftable(tidx,:);
-this_stimtrialdefs = stimtrialdefs(tidx,:);
-end
+    try
+        this_stimtrialdeftable = stimtrialdeftable(tidx,:);
+        this_stimtrialdefs = stimtrialdefs(tidx,:);
+    catch ME
+        warning('Failed to get stim trial defs for trial %d: %s', tidx, ME.message);
+    end
 end
 
-% FIXME - Sanity check.
-
+% Sanity check.
 if isempty(this_rectrialdefs)
-  error('No valid recorder trial epochs defined!');
+    error('No valid recorder trial epochs defined!');
 end
 
 if have_stim && isempty(this_stimtrialdefs)
-  error('No valid stimulator trial epochs defined!');
+    error('No valid stimulator trial epochs defined!');
 end
 
 preproc_config_rec = struct( ...
