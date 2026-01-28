@@ -9,21 +9,27 @@ ExperimentName = CheckVararginPairs('ExperimentName','IDED_DBC_AH_AN', varargin{
 
 Epoch = CheckVararginPairs('Epoch', 'Decision', varargin{:});
 
-cfg_param = PARAMETERS_cgg_procFullTrialPreparation_v2(Epoch);
-
 flatten_only = CheckVararginPairs('detrend_flatten_only', false, varargin{:});
 
 do_zscore = CheckVararginPairs('do_zscore', true, varargin{:});
 
-TrialDuration_Minimum=cfg_param.TrialDuration_Minimum;
-% Count_Sel_Trial=cfg_param.Count_Sel_Trial;
+cfg_param = PARAMETERS_cgg_procFullTrialPreparation_v2(Epoch);
 
+TrialDuration_Minimum=cfg_param.TrialDuration_Minimum;
 probe_area=cfg_param.probe_area;
-Activity_Type=cfg_param.Activity_Type;
-Smooth_Factor=cfg_param.Smooth_Factor;
-SmoothType=cfg_param.SmoothType;
 want_all_Probes=cfg_param.want_all_Probes;
-PassBand=cfg_param.PassBand;
+
+% Get Activity_Type from parameters - supports 'MUA', 'LFP', or 'both'
+Activity_Types_Input = cfg_param.Activity_Type;
+
+% Handle 'both' option - convert to cell array for looping
+if ischar(Activity_Types_Input) && strcmpi(Activity_Types_Input, 'both')
+    Activity_Types_to_Process = {'MUA', 'LFP'};
+elseif iscell(Activity_Types_Input)
+    Activity_Types_to_Process = Activity_Types_Input;
+else
+    Activity_Types_to_Process = {Activity_Types_Input};
+end
 
 Frame_Event_Selection_Data=cfg_param.Frame_Event_Selection_Data;
 Frame_Event_Selection_Location_Data=cfg_param.Frame_Event_Selection_Location_Data;
@@ -67,9 +73,7 @@ end
 
 inputfolder=cfg.inputfolder;
 outdatadir=cfg.outdatadir;
-[cfg_epoch] = cgg_generateEpochFolders(Epoch,'inputfolder',inputfolder,'outdatadir',outdatadir);
-
-
+% Note: cfg_epoch is now generated inside the Activity_Type loop to support separate output folders
 
 % ---- Load (or create) session-level behavior once ----
 [cfg_v2] = cgg_generateNeuralDataFoldersTopLevel_v2('inputfolder',inputfolder,'outdatadir',outdatadir);
@@ -110,6 +114,21 @@ assert(isfield(trialVariables,'TrialNumber'), ...
 Session_Start_Message=sprintf('*** Starting Processing Session: %s',cfg.SessionName);
 Session_End_Message=sprintf('*** Finished Processing Session: %s',cfg.SessionName);
 disp(Session_Start_Message);
+
+%% Loop through Activity Types (MUA, LFP, or both)
+for activity_type_idx = 1:length(Activity_Types_to_Process)
+    Activity_Type = Activity_Types_to_Process{activity_type_idx};
+    fprintf('\n=== Processing Activity Type: %s ===\n', Activity_Type);
+
+    % Load activity-type-specific parameters from PARAMETERS
+    cfg_param_activity = PARAMETERS_cgg_procFullTrialPreparation_v2(Epoch, Activity_Type);
+    Smooth_Factor = cfg_param_activity.Smooth_Factor;
+    SmoothType = cfg_param_activity.SmoothType;
+    PassBand = cfg_param_activity.PassBand;
+
+    % Generate epoch folders with Activity_Type for separate output paths
+    [cfg_epoch] = cgg_generateEpochFolders(Epoch, 'inputfolder', inputfolder, ...
+        'outdatadir', outdatadir, 'Activity_Type', Activity_Type);
 
 %%
 IsSessionProcessed=cgg_checkEpochSessionProcessed(cfg_epoch);
@@ -347,6 +366,8 @@ end % End Iteration through all the Probes
 cgg_checkEpochSessionProcessed(cfg_epoch,'SessionFinished',~SessionIssue);
 
 end % End If for whether Session has been processed
+
+end % End Activity_Type loop
 
 disp(Session_End_Message);
 end

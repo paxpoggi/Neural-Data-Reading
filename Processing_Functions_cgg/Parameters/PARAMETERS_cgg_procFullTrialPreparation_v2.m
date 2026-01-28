@@ -1,4 +1,4 @@
-function cfg = PARAMETERS_cgg_procFullTrialPreparation_v2(Epoch)
+function cfg = PARAMETERS_cgg_procFullTrialPreparation_v2(Epoch, Activity_Type)
 
 
 % This script includes the Parameters for cgg_procFullTrialPreparation_v2.
@@ -9,11 +9,29 @@ TrialDuration_Minimum=10;
 Count_Sel_Trial=30;
 
 probe_area='ACC_001';
-Activity_Type='MUA';
-Smooth_Factor=50;
-SmoothType='gaussian'; % None
-want_all_Probes=true;
-PassBand = NaN; % [10,36]
+
+% Activity_Type: 'MUA', 'LFP', or 'both'
+% Set default if not provided
+if nargin < 2 || isempty(Activity_Type)
+    Activity_Type = 'MUA';
+end
+
+% Activity-type-specific parameter defaults
+switch Activity_Type
+    case 'MUA'
+        Smooth_Factor = 50;
+        SmoothType = 'gaussian';
+        PassBand = NaN; % [10,36]
+    case 'LFP'
+        Smooth_Factor = 0;      % LFP already low-pass filtered
+        SmoothType = 'None';
+        PassBand = NaN;         % e.g., [4,8] for theta, [13,30] for beta
+    otherwise
+        Smooth_Factor = 50;
+        SmoothType = 'gaussian';
+        PassBand = NaN;
+end
+want_all_Probes = true;
 
 Increment_Time=25; %Value in ms
 
