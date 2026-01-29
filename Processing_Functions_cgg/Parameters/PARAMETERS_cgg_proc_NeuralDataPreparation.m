@@ -133,14 +133,19 @@ want_Spike = false;
 % will GREATLY reduce the amount of data that has to be saved to hard
 % drive.
 
-keep_wideband=false;
+keep_wideband = true;
 
 % For visualizing processing steps this boolean determines whether to save
 % the raw wideband and notch filtered. Regular wideband is rereferenced as
 % well
 
-keep_raw = false;
-keep_notch = false;
+keep_raw = true;
+keep_notch = true;
+
+% For debugging: limit how many trials to keep for Raw/WideBand/Notch
+% Set to Inf to keep all trials, or a number like 5 to keep only first 5
+% This only affects trials that are saved (based on keep_* flags above)
+debug_keep_n_trials = 5;
 
 %%
 

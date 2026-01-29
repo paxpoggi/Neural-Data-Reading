@@ -84,6 +84,7 @@ keep_wideband = cfg.keep_wideband;
 
 keep_raw = cfg.keep_raw;
 keep_notch = cfg.keep_notch;
+debug_keep_n_trials = cfg.debug_keep_n_trials;
 
 %%
 % Make the Experiment and Session output folder names.
@@ -835,7 +836,7 @@ end
 % Save wideband data with retry logic for cluster filesystem robustness
 kaa_saveWithRetry(this_trial_wideband_file_name, 'this_recdata_wideband', this_recdata_wideband);
 
-if keep_raw
+if keep_raw && (tidx <= debug_keep_n_trials)
     kaa_saveWithRetry(this_trial_Raw_file_name, 'this_recdata_wideband', this_recdata_wideband);
 end
 
@@ -1037,7 +1038,7 @@ parfor tidx=1:trialcount
     this_recdata_wideband = euFT_doBrickNotchRemoval( ...
       this_recdata_wideband, notch_filter_freqs, notch_filter_bandwidth );
 
-    if keep_notch
+    if keep_notch && (tidx <= debug_keep_n_trials)
     m_notch = matfile(this_trial_Notch_file_name,'Writable',true);
     m_notch.this_recdata_wideband=this_recdata_wideband;
     end
@@ -1085,6 +1086,18 @@ end
 %%
 if ~keep_wideband
     rmdir(outdatadir_WideBand, 's');
+elseif isfinite(debug_keep_n_trials)
+    % Keep only first N trials, delete the rest
+    wb_files = dir(fullfile(outdatadir_WideBand, 'WideBand_Trial_*.mat'));
+    for f_idx = 1:length(wb_files)
+        tokens = regexp(wb_files(f_idx).name, '_Trial_(\d+)\.mat', 'tokens');
+        if ~isempty(tokens)
+            trial_num = str2double(tokens{1}{1});
+            if trial_num > debug_keep_n_trials
+                delete(fullfile(outdatadir_WideBand, wb_files(f_idx).name));
+            end
+        end
+    end
 end
 end
 
