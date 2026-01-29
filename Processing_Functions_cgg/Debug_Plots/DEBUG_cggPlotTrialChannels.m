@@ -5,6 +5,10 @@
 % Output folder structure mirrors input but under 'debug_plots' instead of 'Data_Neural':
 %   Input:  processed_data/Data_Neural/Experiment/Session/Activity/ProbeArea/SignalType/
 %   Output: processed_data/debug_plots/Experiment/Session/Activity/ProbeArea/SignalType/
+%
+% Outputs per signal type:
+%   - Individual trial plots: SignalType_Trial_X.png
+%   - Average across trials: SignalType_Average_Trials_X-Y.png
 
 clc; clear; close all;
 
@@ -112,6 +116,7 @@ for sidx = 1:length(cfg)
             
             % Filter to only requested trials
             trials_to_process = intersect(trial_numbers, Trial_Range);
+            trials_to_process = sort(trials_to_process);  % Ensure sorted order
             
             if isempty(trials_to_process)
                 fprintf('      No matching trials in Trial_Range. Skipping.\n');
@@ -120,8 +125,16 @@ for sidx = 1:length(cfg)
             
             fprintf('      Found %d trials to process.\n', length(trials_to_process));
             
+            % Storage for computing average across trials
+            all_trials_data = {};
+            common_time_vec = [];
+            common_nChannels = 0;
+            channel_order = [];
+            ordered_labels = {};
+            
             %% Process each trial
-            for trial_num = trials_to_process
+            for trial_idx = 1:length(trials_to_process)
+                trial_num = trials_to_process(trial_idx);
                 trial_file_name = sprintf('%s_Trial_%d.mat', this_signal_type, trial_num);
                 trial_file_path = fullfile(signal_type_path, trial_file_name);
                 
@@ -139,13 +152,11 @@ for sidx = 1:length(cfg)
                     % Find the FieldTrip structure variable
                     field_names = fieldnames(trial_data);
                     ft_struct = [];
-                    ft_var_name = '';
                     
                     for fn_idx = 1:length(field_names)
                         candidate = trial_data.(field_names{fn_idx});
                         if isstruct(candidate) && isfield(candidate, 'trial') && isfield(candidate, 'label')
                             ft_struct = candidate;
-                            ft_var_name = field_names{fn_idx};
                             break;
                         end
                     end
@@ -173,6 +184,44 @@ for sidx = 1:length(cfg)
                         channel_labels = arrayfun(@(x) sprintf('Ch%d', x), 1:nChannels, 'UniformOutput', false);
                     end
                     
+                    % Sort channels by numeric order (Channel 1, 2, 3, ...)
+                    % Extract numeric part from labels for sorting
+                    channel_nums = zeros(1, nChannels);
+                    for ch_idx = 1:nChannels
+                        if iscell(channel_labels)
+                            label_str = channel_labels{ch_idx};
+                        else
+                            label_str = sprintf('%d', ch_idx);
+                        end
+                        % Extract number from label (e.g., 'Chan001' -> 1, 'Ch_32' -> 32)
+                        num_tokens = regexp(label_str, '(\d+)', 'tokens');
+                        if ~isempty(num_tokens)
+                            channel_nums(ch_idx) = str2double(num_tokens{end}{1});
+                        else
+                            channel_nums(ch_idx) = ch_idx;
+                        end
+                    end
+                    
+                    % Get sorting order
+                    [~, sort_order] = sort(channel_nums);
+                    
+                    % Reorder data and labels
+                    data_matrix_ordered = data_matrix(sort_order, :);
+                    if iscell(channel_labels)
+                        channel_labels_ordered = channel_labels(sort_order);
+                    else
+                        channel_labels_ordered = arrayfun(@(x) sprintf('Ch%d', x), sort_order, 'UniformOutput', false);
+                    end
+                    
+                    % Store for averaging
+                    all_trials_data{end+1} = data_matrix_ordered;
+                    if isempty(common_time_vec)
+                        common_time_vec = time_vec;
+                        common_nChannels = nChannels;
+                        channel_order = sort_order;
+                        ordered_labels = channel_labels_ordered;
+                    end
+                    
                     % Calculate subplot grid (square-ish)
                     nCols = ceil(sqrt(nChannels));
                     nRows = ceil(nChannels / nCols);
@@ -189,31 +238,20 @@ for sidx = 1:length(cfg)
                         SessionName, this_probe_area, this_signal_type, trial_num, nChannels), ...
                         'FontSize', 10, 'Interpreter', 'none');
                     
-                    % Plot each channel
+                    % Plot each channel in sorted order
                     for ch_idx = 1:nChannels
                         subplot(nRows, nCols, ch_idx);
                         
-                        plot(time_vec, data_matrix(ch_idx, :), 'LineWidth', Line_Width);
+                        plot(time_vec, data_matrix_ordered(ch_idx, :), 'LineWidth', Line_Width);
                         
-                        % Minimal formatting for speed
-                        if ch_idx <= nCols
-                            % Top row - no x label
-                        end
-                        if mod(ch_idx, nCols) == 1
-                            % Left column - keep y axis
-                        else
-                            set(gca, 'YTickLabel', []);
-                        end
-                        
-                        % Channel label as title
-                        if iscell(channel_labels)
-                            title(channel_labels{ch_idx}, 'FontSize', Font_Size, 'Interpreter', 'none');
-                        else
-                            title(sprintf('Ch %d', ch_idx), 'FontSize', Font_Size);
-                        end
+                        % Channel label as title (show channel number)
+                        title(sprintf('Ch %d', ch_idx), 'FontSize', Font_Size);
                         
                         set(gca, 'FontSize', Font_Size);
                         axis tight;
+                        
+                        % Keep y-axis values visible for all subplots
+                        % (no hiding of YTickLabel)
                     end
                     
                     % Save figure as PNG
@@ -237,6 +275,71 @@ for sidx = 1:length(cfg)
                 
             end % trial loop
             
+            %% Create average across trials plot
+            if length(all_trials_data) >= 2
+                fprintf('      Creating average across trials plot...\n');
+                
+                try
+                    % Find minimum number of samples across trials
+                    min_samples = min(cellfun(@(x) size(x, 2), all_trials_data));
+                    
+                    % Stack all trials and compute mean
+                    stacked_data = zeros(common_nChannels, min_samples, length(all_trials_data));
+                    for t_idx = 1:length(all_trials_data)
+                        stacked_data(:, :, t_idx) = all_trials_data{t_idx}(:, 1:min_samples);
+                    end
+                    avg_data = mean(stacked_data, 3);
+                    
+                    % Truncate time vector if needed
+                    time_vec_avg = common_time_vec(1:min_samples);
+                    
+                    % Calculate subplot grid
+                    nCols = ceil(sqrt(common_nChannels));
+                    nRows = ceil(common_nChannels / nCols);
+                    
+                    % Create figure
+                    if Show_Figures
+                        fig = figure('Position', [100, 100, Figure_Width, Figure_Height]);
+                    else
+                        fig = figure('Position', [100, 100, Figure_Width, Figure_Height], 'Visible', 'off');
+                    end
+                    
+                    % Set figure title
+                    trial_range_str = sprintf('%d-%d', min(trials_to_process), max(trials_to_process));
+                    sgtitle(sprintf('%s - %s - %s - AVERAGE (Trials %s, n=%d)', ...
+                        SessionName, this_probe_area, this_signal_type, trial_range_str, length(all_trials_data)), ...
+                        'FontSize', 10, 'Interpreter', 'none');
+                    
+                    % Plot each channel
+                    for ch_idx = 1:common_nChannels
+                        subplot(nRows, nCols, ch_idx);
+                        
+                        plot(time_vec_avg, avg_data(ch_idx, :), 'LineWidth', Line_Width, 'Color', [0.8 0.2 0.2]);
+                        
+                        % Channel label as title
+                        title(sprintf('Ch %d', ch_idx), 'FontSize', Font_Size);
+                        
+                        set(gca, 'FontSize', Font_Size);
+                        axis tight;
+                    end
+                    
+                    % Save figure as PNG
+                    output_file_name = sprintf('%s_Average_Trials_%s.png', this_signal_type, trial_range_str);
+                    output_file_path = fullfile(output_path, output_file_name);
+                    
+                    print(fig, output_file_path, '-dpng', '-r150');
+                    close(fig);
+                    
+                    fprintf('        Saved: %s\n', output_file_name);
+                    
+                catch ME
+                    warning('Error creating average plot: %s', ME.message);
+                    if exist('fig', 'var') && ishandle(fig)
+                        close(fig);
+                    end
+                end
+            end
+            
         end % signal type loop
         
     end % probe area loop
@@ -244,4 +347,3 @@ for sidx = 1:length(cfg)
 end % session loop
 
 fprintf('\n=== Debug plotting complete ===\n');
-
