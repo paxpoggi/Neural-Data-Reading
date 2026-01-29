@@ -1,49 +1,39 @@
-%% DEBUG_cggPlotTrialChannels
-% Debug script to visualize all channels for each trial across signal types.
-% Generates subplot figures showing each channel's time series and saves as PNG.
+function kaa_plotTrialChannels(cfg, Signal_Types, Trial_Range, varargin)
+%KAA_PLOTTRIALACHANNELS Plot all channels for each trial across signal types
 %
-% Output folder structure mirrors input but under 'debug_plots' instead of 'Data_Neural':
-%   Input:  processed_data/Data_Neural/Experiment/Session/Activity/ProbeArea/SignalType/
-%   Output: processed_data/debug_plots/Experiment/Session/Activity/ProbeArea/SignalType/
+%   kaa_plotTrialChannels(cfg, Signal_Types, Trial_Range)
+%   kaa_plotTrialChannels(cfg, Signal_Types, Trial_Range, 'Name', Value, ...)
 %
-% Outputs per signal type:
-%   - Individual trial plots: SignalType_Trial_X.png
-%   - Average across trials: SignalType_Average_Trials_X-Y.png
+%   Generates subplot figures showing each channel's time series and saves as PNG.
+%
+%   Output folder structure mirrors input but under 'debug_plots' instead of 'Data_Neural':
+%     Input:  processed_data/Data_Neural/Experiment/Session/Activity/ProbeArea/SignalType/
+%     Output: processed_data/debug_plots/Experiment/Session/Activity/ProbeArea/SignalType/
+%
+%   Inputs:
+%     cfg          - Session configuration from DATA_cggAllSessionInformationConfiguration
+%     Signal_Types - Cell array of signal types (e.g., {'WideBand', 'Raw', 'Notch'})
+%     Trial_Range  - Array of trial numbers to process (e.g., 1:5)
+%
+%   Optional Name-Value pairs:
+%     'Figure_Width'  - Figure width in pixels (default: 1920)
+%     'Figure_Height' - Figure height in pixels (default: 1080)
+%     'Line_Width'    - Line width for plots (default: 0.5)
+%     'Font_Size'     - Font size for labels (default: 6)
+%     'Show_Figures'  - Show figures while processing (default: false)
+%
+%   Author: KAA
 
-clc; clear; close all;
-
-%% =========================================================================
-% CONFIGURABLE PARAMETERS - Modify these as needed
-% =========================================================================
-
-% Which signal types to plot (options: 'WideBand', 'Raw', 'Notch', 'LFP', 'MUA')
-Signal_Types = {'WideBand', 'Raw', 'Notch'};
-
-% Which trials to plot (can be a range like 1:10, or specific numbers like [1, 5, 10])
-Trial_Range = 1:5;
-
-% Figure settings
-Figure_Width = 1920;   % pixels
-Figure_Height = 1080;  % pixels
-
-% Plot settings
-Line_Width = 0.5;
-Font_Size = 6;
-
-% Set to true to show figures while processing (slower), false to hide
-Show_Figures = false;
-
-% =========================================================================
-% END OF CONFIGURABLE PARAMETERS
-% =========================================================================
-
-%% Load session configuration
-[cfg] = DATA_cggAllSessionInformationConfiguration;
+% Parse optional parameters
+Figure_Width = CheckVararginPairs('Figure_Width', 1920, varargin{:});
+Figure_Height = CheckVararginPairs('Figure_Height', 1080, varargin{:});
+Line_Width = CheckVararginPairs('Line_Width', 0.5, varargin{:});
+Font_Size = CheckVararginPairs('Font_Size', 6, varargin{:});
+Show_Figures = CheckVararginPairs('Show_Figures', false, varargin{:});
 
 %% Process each session
 for sidx = 1:length(cfg)
     
-    inputfolder = cfg(sidx).inputfolder;
     outdatadir = cfg(sidx).outdatadir;
     ExperimentName = cfg(sidx).ExperimentName;
     SessionName = cfg(sidx).SessionName;
@@ -125,13 +115,6 @@ for sidx = 1:length(cfg)
             
             fprintf('      Found %d trials to process.\n', length(trials_to_process));
             
-            % Storage for computing average across trials
-            all_trials_data = {};
-            common_time_vec = [];
-            common_nChannels = 0;
-            channel_order = [];
-            ordered_labels = {};
-            
             %% Process each trial
             for trial_idx = 1:length(trials_to_process)
                 trial_num = trials_to_process(trial_idx);
@@ -205,22 +188,8 @@ for sidx = 1:length(cfg)
                     % Get sorting order
                     [~, sort_order] = sort(channel_nums);
                     
-                    % Reorder data and labels
+                    % Reorder data by channel number
                     data_matrix_ordered = data_matrix(sort_order, :);
-                    if iscell(channel_labels)
-                        channel_labels_ordered = channel_labels(sort_order);
-                    else
-                        channel_labels_ordered = arrayfun(@(x) sprintf('Ch%d', x), sort_order, 'UniformOutput', false);
-                    end
-                    
-                    % Store for averaging
-                    all_trials_data{end+1} = data_matrix_ordered;
-                    if isempty(common_time_vec)
-                        common_time_vec = time_vec;
-                        common_nChannels = nChannels;
-                        channel_order = sort_order;
-                        ordered_labels = channel_labels_ordered;
-                    end
                     
                     % Calculate subplot grid (square-ish)
                     nCols = ceil(sqrt(nChannels));
@@ -275,75 +244,13 @@ for sidx = 1:length(cfg)
                 
             end % trial loop
             
-            %% Create average across trials plot
-            if length(all_trials_data) >= 2
-                fprintf('      Creating average across trials plot...\n');
-                
-                try
-                    % Find minimum number of samples across trials
-                    min_samples = min(cellfun(@(x) size(x, 2), all_trials_data));
-                    
-                    % Stack all trials and compute mean
-                    stacked_data = zeros(common_nChannels, min_samples, length(all_trials_data));
-                    for t_idx = 1:length(all_trials_data)
-                        stacked_data(:, :, t_idx) = all_trials_data{t_idx}(:, 1:min_samples);
-                    end
-                    avg_data = mean(stacked_data, 3);
-                    
-                    % Truncate time vector if needed
-                    time_vec_avg = common_time_vec(1:min_samples);
-                    
-                    % Calculate subplot grid
-                    nCols = ceil(sqrt(common_nChannels));
-                    nRows = ceil(common_nChannels / nCols);
-                    
-                    % Create figure
-                    if Show_Figures
-                        fig = figure('Position', [100, 100, Figure_Width, Figure_Height]);
-                    else
-                        fig = figure('Position', [100, 100, Figure_Width, Figure_Height], 'Visible', 'off');
-                    end
-                    
-                    % Set figure title
-                    trial_range_str = sprintf('%d-%d', min(trials_to_process), max(trials_to_process));
-                    sgtitle(sprintf('%s - %s - %s - AVERAGE (Trials %s, n=%d)', ...
-                        SessionName, this_probe_area, this_signal_type, trial_range_str, length(all_trials_data)), ...
-                        'FontSize', 10, 'Interpreter', 'none');
-                    
-                    % Plot each channel
-                    for ch_idx = 1:common_nChannels
-                        subplot(nRows, nCols, ch_idx);
-                        
-                        plot(time_vec_avg, avg_data(ch_idx, :), 'LineWidth', Line_Width, 'Color', [0.8 0.2 0.2]);
-                        
-                        % Channel label as title
-                        title(sprintf('Ch %d', ch_idx), 'FontSize', Font_Size);
-                        
-                        set(gca, 'FontSize', Font_Size);
-                        axis tight;
-                    end
-                    
-                    % Save figure as PNG
-                    output_file_name = sprintf('%s_Average_Trials_%s.png', this_signal_type, trial_range_str);
-                    output_file_path = fullfile(output_path, output_file_name);
-                    
-                    print(fig, output_file_path, '-dpng', '-r150');
-                    close(fig);
-                    
-                    fprintf('        Saved: %s\n', output_file_name);
-                    
-                catch ME
-                    warning('Error creating average plot: %s', ME.message);
-                    if exist('fig', 'var') && ishandle(fig)
-                        close(fig);
-                    end
-                end
-            end
-            
         end % signal type loop
         
     end % probe area loop
     
 end % session loop
 
-fprintf('\n=== Debug plotting complete ===\n');
+fprintf('\n=== Trial channel plotting complete ===\n');
+
+end
+
