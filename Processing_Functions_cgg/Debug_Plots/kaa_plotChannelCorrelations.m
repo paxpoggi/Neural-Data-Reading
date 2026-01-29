@@ -157,9 +157,10 @@ for sidx = 1:length(cfg)
                     [nChannels, ~] = size(data_matrix);
                     
                     % Get channel labels if available
-                    if isfield(ft_struct, 'label')
+                    if isfield(ft_struct, 'label') && ~isempty(ft_struct.label)
                         channel_labels = ft_struct.label;
                     else
+                        fprintf('        [INFO] Channel labels not found, using default (Ch1, Ch2, ...)\n');
                         channel_labels = arrayfun(@(x) sprintf('Ch%d', x), 1:nChannels, 'UniformOutput', false);
                     end
                     

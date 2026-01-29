@@ -157,13 +157,15 @@ for sidx = 1:length(cfg)
                     if isfield(ft_struct, 'time') && ~isempty(ft_struct.time)
                         time_vec = ft_struct.time{1};
                     else
+                        fprintf('        [INFO] Time vector not found, using sample indices (1:%d)\n', nSamples);
                         time_vec = 1:nSamples;
                     end
                     
                     % Get channel labels if available
-                    if isfield(ft_struct, 'label')
+                    if isfield(ft_struct, 'label') && ~isempty(ft_struct.label)
                         channel_labels = ft_struct.label;
                     else
+                        fprintf('        [INFO] Channel labels not found, using default (Ch1, Ch2, ...)\n');
                         channel_labels = arrayfun(@(x) sprintf('Ch%d', x), 1:nChannels, 'UniformOutput', false);
                     end
                     
