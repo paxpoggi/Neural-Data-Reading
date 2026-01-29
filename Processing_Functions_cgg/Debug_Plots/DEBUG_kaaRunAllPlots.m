@@ -26,9 +26,9 @@ TrialChannels_Figure_Height = 1080;  % pixels
 TrialChannels_Line_Width = 0.5;
 TrialChannels_Font_Size = 6;
 
-% Figure settings for correlation plots
-Correlation_Figure_Width = 1080;   % pixels (square)
-Correlation_Figure_Height = 1080;  % pixels
+% Figure settings for correlation plots (side-by-side subplots)
+Correlation_Figure_Width = 2000;   % pixels (wide for 2 subplots)
+Correlation_Figure_Height = 900;   % pixels
 Correlation_Colormap = 'jet';      % Options: 'jet', 'hot', 'parula', 'turbo', etc.
 
 % Set to true to show figures while processing (slower), false to hide

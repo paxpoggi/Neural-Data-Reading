@@ -8,6 +8,10 @@ function kaa_plotChannelCorrelations(cfg, Signal_Types, Trial_Range, varargin)
 %   The correlation matrix is computed using Pearson correlation between each pair
 %   of channels across all time samples within a trial.
 %
+%   Generates 2 subplots per trial:
+%     Left:  Channels sorted by numeric label (from ft_struct.label)
+%     Right: Channels in original matrix order (index 1, 2, 3, ...)
+%
 %   Output folder structure:
 %     debug_plots/Experiment/Session/Activity/ProbeArea/Channels_Correlation/
 %
@@ -17,16 +21,16 @@ function kaa_plotChannelCorrelations(cfg, Signal_Types, Trial_Range, varargin)
 %     Trial_Range  - Array of trial numbers to process (e.g., 1:5)
 %
 %   Optional Name-Value pairs:
-%     'Figure_Width'  - Figure width in pixels (default: 1080)
-%     'Figure_Height' - Figure height in pixels (default: 1080)
+%     'Figure_Width'  - Figure width in pixels (default: 2000, for side-by-side)
+%     'Figure_Height' - Figure height in pixels (default: 900)
 %     'Colormap'      - Colormap to use (default: 'jet')
 %     'Show_Figures'  - Show figures while processing (default: false)
 %
 %   Author: KAA
 
 % Parse optional parameters
-Figure_Width = CheckVararginPairs('Figure_Width', 1080, varargin{:});
-Figure_Height = CheckVararginPairs('Figure_Height', 1080, varargin{:});
+Figure_Width = CheckVararginPairs('Figure_Width', 2000, varargin{:});
+Figure_Height = CheckVararginPairs('Figure_Height', 900, varargin{:});
 Colormap_Name = CheckVararginPairs('Colormap', 'jet', varargin{:});
 Show_Figures = CheckVararginPairs('Show_Figures', false, varargin{:});
 
@@ -176,38 +180,62 @@ for sidx = 1:length(cfg)
                     end
                     [~, sort_order] = sort(channel_nums);
                     
-                    % Reorder data by channel number
-                    data_matrix_ordered = data_matrix(sort_order, :);
+                    % Reorder data by channel number (sorted)
+                    data_matrix_sorted = data_matrix(sort_order, :);
                     
-                    % Compute correlation matrix across time (channels x channels)
+                    % Compute correlation matrices
                     % corr() computes correlation between columns, so transpose
-                    corr_matrix = corr(data_matrix_ordered');
+                    corr_matrix_sorted = corr(data_matrix_sorted');   % Sorted by label
+                    corr_matrix_original = corr(data_matrix');        % Original matrix order
                     
-                    % Create figure
+                    % Create figure with 2 subplots
                     if Show_Figures
                         fig = figure('Position', [100, 100, Figure_Width, Figure_Height]);
                     else
                         fig = figure('Position', [100, 100, Figure_Width, Figure_Height], 'Visible', 'off');
                     end
                     
-                    % Plot heatmap
-                    imagesc(corr_matrix);
-                    colormap(Colormap_Name);
-                    colorbar;
-                    caxis([-1, 1]);  % Correlation range
-                    
-                    % Labels
-                    title(sprintf('%s - %s - %s - Trial %d\nChannel Correlation Matrix', ...
+                    % Overall title
+                    sgtitle(sprintf('%s - %s - %s - Trial %d', ...
                         SessionName, this_probe_area, this_signal_type, trial_num), ...
                         'FontSize', 12, 'Interpreter', 'none');
-                    xlabel('Channel', 'FontSize', 10);
-                    ylabel('Channel', 'FontSize', 10);
                     
-                    % Set axis properties
+                    % --- Left subplot: Sorted by channel label ---
+                    subplot(1, 2, 1);
+                    imagesc(corr_matrix_sorted);
+                    colormap(Colormap_Name);
+                    cb1 = colorbar;
+                    cb1.Label.String = 'Correlation';
+                    caxis([-1, 1]);
+                    
+                    title('Sorted by Channel Label', 'FontSize', 11);
+                    xlabel('Channel (sorted)', 'FontSize', 10);
+                    ylabel('Channel (sorted)', 'FontSize', 10);
+                    
                     axis square;
                     set(gca, 'FontSize', 8);
                     
-                    % Add tick labels at reasonable intervals for large channel counts
+                    if nChannels > 32
+                        tick_interval = ceil(nChannels / 16);
+                        tick_positions = 1:tick_interval:nChannels;
+                        set(gca, 'XTick', tick_positions, 'YTick', tick_positions);
+                    end
+                    
+                    % --- Right subplot: Original matrix order ---
+                    subplot(1, 2, 2);
+                    imagesc(corr_matrix_original);
+                    colormap(Colormap_Name);
+                    cb2 = colorbar;
+                    cb2.Label.String = 'Correlation';
+                    caxis([-1, 1]);
+                    
+                    title('Original Matrix Order', 'FontSize', 11);
+                    xlabel('Channel (index)', 'FontSize', 10);
+                    ylabel('Channel (index)', 'FontSize', 10);
+                    
+                    axis square;
+                    set(gca, 'FontSize', 8);
+                    
                     if nChannels > 32
                         tick_interval = ceil(nChannels / 16);
                         tick_positions = 1:tick_interval:nChannels;
