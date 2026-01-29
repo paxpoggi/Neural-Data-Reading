@@ -344,7 +344,7 @@ Output(2).Significant_Channels=Significant_Channels;
 Output(3).Significant_Channels=NotSignificant_Channels;
 
 %% 
-SizeIssue = pgp_saveTrialEpochs(Output,this_probe_area,trialVariables,Epoch,Probe_Order,cfg_directories,cfg_param);
+SizeIssue = pgp_saveTrialEpochs(Output,this_probe_area,trialVariables,Epoch,Probe_Order,cfg_directories,cfg_param_activity);
 
 if SizeIssue
     SessionIssue=true;
