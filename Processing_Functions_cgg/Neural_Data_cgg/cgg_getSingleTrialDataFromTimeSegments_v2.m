@@ -41,13 +41,15 @@ if exist(this_trial_file_name,'file')
     this_trial=m_trial.trial{1};
     if strcmp(SmoothType,'None')
         if ~isnan(PassBand)
-            % FIXME: Add banpdass filtering function and ensure it operates
-            % along the correct dimension (DO NOT FILTER ALONG CHANNELS)
+            % Bandpass filtering (operates along time dimension, not channels)
             this_trial_smooth = bandpass(this_trial',PassBand,SamplingFrequency)';
-            % Do bandpass filtering with SamplingFrequency
+        else
+            % No smoothing and no bandpass filtering - use raw data as-is
+            % (appropriate for LFP which is already low-pass filtered)
+            this_trial_smooth = this_trial;
         end
     else
-    this_trial_smooth=smoothdata(this_trial,2,SmoothType,Smooth_Factor);
+        this_trial_smooth = smoothdata(this_trial,2,SmoothType,Smooth_Factor);
     end
     % this_trial_smooth=smoothdata(this_trial,2,'movmean',Smooth_Factor);
     OutData=this_trial_smooth(:,Start_IDX:End_IDX);
