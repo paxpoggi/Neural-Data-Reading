@@ -161,37 +161,9 @@ for sidx = 1:length(cfg)
                         time_vec = 1:nSamples;
                     end
                     
-                    % Get channel labels if available
-                    if isfield(ft_struct, 'label') && ~isempty(ft_struct.label)
-                        channel_labels = ft_struct.label;
-                    else
-                        fprintf('        [INFO] Channel labels not found, using default (Ch1, Ch2, ...)\n');
-                        channel_labels = arrayfun(@(x) sprintf('Ch%d', x), 1:nChannels, 'UniformOutput', false);
-                    end
-                    
-                    % Sort channels by numeric order (Channel 1, 2, 3, ...)
-                    % Extract numeric part from labels for sorting
-                    channel_nums = zeros(1, nChannels);
-                    for ch_idx = 1:nChannels
-                        if iscell(channel_labels)
-                            label_str = channel_labels{ch_idx};
-                        else
-                            label_str = sprintf('%d', ch_idx);
-                        end
-                        % Extract number from label (e.g., 'Chan001' -> 1, 'Ch_32' -> 32)
-                        num_tokens = regexp(label_str, '(\d+)', 'tokens');
-                        if ~isempty(num_tokens)
-                            channel_nums(ch_idx) = str2double(num_tokens{end}{1});
-                        else
-                            channel_nums(ch_idx) = ch_idx;
-                        end
-                    end
-                    
-                    % Get sorting order
-                    [~, sort_order] = sort(channel_nums);
-                    
-                    % Reorder data by channel number
-                    data_matrix_ordered = data_matrix(sort_order, :);
+                    % Use original matrix order (no sorting by labels)
+                    % Channel 1 = index 1 in matrix, Channel 2 = index 2, etc.
+                    % Label remapping has already been applied upstream
                     
                     % Calculate subplot grid (square-ish)
                     nCols = ceil(sqrt(nChannels));
@@ -209,11 +181,11 @@ for sidx = 1:length(cfg)
                         SessionName, this_probe_area, this_signal_type, trial_num, nChannels), ...
                         'FontSize', 10, 'Interpreter', 'none');
                     
-                    % Plot each channel in sorted order
+                    % Plot each channel in original matrix order
                     for ch_idx = 1:nChannels
                         subplot(nRows, nCols, ch_idx);
                         
-                        plot(time_vec, data_matrix_ordered(ch_idx, :), 'LineWidth', Line_Width);
+                        plot(time_vec, data_matrix(ch_idx, :), 'LineWidth', Line_Width);
                         
                         % Channel label as title (show channel number)
                         title(sprintf('Ch %d', ch_idx), 'FontSize', Font_Size);
