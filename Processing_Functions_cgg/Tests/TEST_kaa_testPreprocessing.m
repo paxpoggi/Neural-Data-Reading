@@ -25,11 +25,7 @@ else
 end
 
 %% Test Results Tracking
-test_results = struct();
-test_results.total = 0;
-test_results.passed = 0;
-test_results.failed = 0;
-test_results.tests = {};
+test_results = struct('total', 0, 'passed', 0, 'failed', 0, 'tests', {});
 
 %% Test 1: Synthetic Data Preprocessing
 fprintf('\n--- Test 1: Synthetic Data Preprocessing ---\n');
@@ -40,7 +36,13 @@ try
     test_results.tests{end+1} = struct('name', 'Synthetic Data Preprocessing', 'status', 'PASSED');
     fprintf('\n✓ Test 1 PASSED\n');
 catch ME
+    if ~isfield(test_results, 'failed')
+        test_results.failed = 0;
+    end
     test_results.failed = test_results.failed + 1;
+    if ~isfield(test_results, 'tests')
+        test_results.tests = {};
+    end
     test_results.tests{end+1} = struct('name', 'Synthetic Data Preprocessing', 'status', 'FAILED', 'error', ME.message);
     fprintf('\n✗ Test 1 FAILED: %s\n', ME.message);
     fprintf('  Stack trace:\n');
@@ -58,7 +60,13 @@ try
     test_results.tests{end+1} = struct('name', 'Full Preprocessing Pipeline', 'status', 'PASSED');
     fprintf('\n✓ Test 2 PASSED\n');
 catch ME
+    if ~isfield(test_results, 'failed')
+        test_results.failed = 0;
+    end
     test_results.failed = test_results.failed + 1;
+    if ~isfield(test_results, 'tests')
+        test_results.tests = {};
+    end
     test_results.tests{end+1} = struct('name', 'Full Preprocessing Pipeline', 'status', 'FAILED', 'error', ME.message);
     fprintf('\n✗ Test 2 FAILED: %s\n', ME.message);
     fprintf('  Stack trace:\n');

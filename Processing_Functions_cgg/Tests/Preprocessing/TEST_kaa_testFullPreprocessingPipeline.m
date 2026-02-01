@@ -10,7 +10,8 @@
 %
 % Author: kaa
 
-clc; clear; close all;
+% Note: 'clear' removed to avoid clearing parent workspace when called from master test
+clc; close all;
 
 %% Setup
 fprintf('=== Testing Full Preprocessing Pipeline with Synthetic Data ===\n\n');
