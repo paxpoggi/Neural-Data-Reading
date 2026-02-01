@@ -51,6 +51,13 @@ data = kaa_generateSyntheticFieldTripData('fsample', 30000, 'duration', 1);
 fprintf('   Generated %d channels, %d samples at %.0f Hz\n', ...
     length(data.label), length(data.time{1}), data.fsample);
 
+% Show input data
+fprintf('   Plotting input data...\n');
+kaa_plotChannelComparison(data, [1, 4, 6, 7, 9], ...
+    'title', 'Input Data: Good Channels (1,4), DC Artifact (6), 60Hz Noise (7), High Amplitude (9)', ...
+    'time_range', [0, 0.1], 'freq_range', [0, 200]);
+pause(0.5);
+
 %% Create Folder Structure
 fprintf('\n2. Creating folder structure...\n');
 try
@@ -105,6 +112,13 @@ try
     kaa_saveWithRetry(notch_filename, 'this_recdata_wideband', this_recdata_notch);
     fprintf('   ✓ Notch filtering applied and saved\n');
     
+    % Show notch filtering result
+    fprintf('   Plotting notch filtering result...\n');
+    kaa_plotBeforeAfter(this_recdata_wideband, this_recdata_notch, 7, ...
+        'title', sprintf('Notch Filtering: Channel 7 (60Hz) - Before vs After'), ...
+        'freq_range', [40, 80]);
+    pause(0.5);
+    
     % Validate notch filtering
     predicted_notch = kaa_predictNotchOutput(data, notch_filter_freqs, notch_filter_bandwidth);
     results_notch = kaa_validateNotchFiltering(this_recdata_notch, predicted_notch, -40, 'before_data', this_recdata_wideband);
@@ -132,6 +146,13 @@ try
     lfp_filename = sprintf('%s/LFP_Trial_%d.mat', outdatadir_LFP, trial_index);
     kaa_saveWithRetry(lfp_filename, 'this_recdata_lfp', this_recdata_lfp);
     fprintf('   ✓ LFP generated and saved\n');
+    
+    % Show LFP generation result
+    fprintf('   Plotting LFP generation result...\n');
+    kaa_plotBeforeAfter(this_recdata_wideband, this_recdata_lfp, 4, ...
+        'title', sprintf('LFP Generation: Channel 4 (1000Hz) - Lowpass %dHz, Downsample to %dHz', lfp_maxfreq, lfp_samprate), ...
+        'freq_range', [0, 500]);
+    pause(0.5);
     
     % Validate LFP
     predicted_lfp = kaa_predictLFPOutput(data, lfp_maxfreq, lfp_samprate);
@@ -162,6 +183,14 @@ try
     mua_filename = sprintf('%s/MUA_Trial_%d.mat', outdatadir_MUA, trial_index);
     kaa_saveWithRetry(mua_filename, 'this_recdata_activity', this_recdata_mua);
     fprintf('   ✓ MUA generated and saved\n');
+    
+    % Show MUA generation result
+    fprintf('   Plotting MUA generation result...\n');
+    kaa_plotBeforeAfter(this_recdata_wideband, this_recdata_mua, 4, ...
+        'title', sprintf('MUA Generation: Channel 4 - Bandpass [%d-%d]Hz, Rectify, Lowpass %dHz', ...
+        rect_bandfreqs(1), rect_bandfreqs(2), rect_lowpassfreq), ...
+        'freq_range', [0, 1000]);
+    pause(0.5);
     
     % Validate MUA
     predicted_mua = kaa_predictMUAOutput(data, spike_minfreq, rect_bandfreqs, ...
@@ -240,6 +269,30 @@ end
 %% Summary
 fprintf('\n=== Test Summary ===\n');
 fprintf('All preprocessing pipeline tests completed.\n');
+
+% Show complete pipeline progression
+fprintf('Plotting complete preprocessing pipeline progression...\n');
+try
+    m_wideband = matfile(wideband_filename);
+    m_notch = matfile(notch_filename);
+    m_lfp = matfile(lfp_filename);
+    m_mua = matfile(mua_filename);
+    
+    this_recdata_wideband = m_wideband.this_recdata_wideband;
+    this_recdata_notch = m_notch.this_recdata_wideband;
+    this_recdata_lfp = m_lfp.this_recdata_lfp;
+    this_recdata_mua = m_mua.this_recdata_activity;
+    
+    kaa_plotPreprocessingPipeline([], this_recdata_wideband, this_recdata_notch, ...
+        this_recdata_lfp, this_recdata_mua, ...
+        'channels', [1, 4, 7], ...
+        'title', 'Complete Preprocessing Pipeline: Wideband → Notch → LFP → MUA', ...
+        'time_range', [0, 0.1], ...
+        'freq_range', [0, 200]);
+catch ME
+    fprintf('   Warning: Could not plot pipeline progression: %s\n', ME.message);
+end
+
 fprintf('Temporary directory will be cleaned up automatically.\n');
 fprintf('\nTest completed.\n');
 
