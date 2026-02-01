@@ -1,7 +1,7 @@
-function results = kaa_validateNotchFiltering(actual_data, predicted, tolerance_db)
+function results = kaa_validateNotchFiltering(actual_data, predicted, tolerance_db, varargin)
 %KAA_VALIDATENOTCHFILTERING Validate notch filter output
 %
-%   results = kaa_validateNotchFiltering(actual_data, predicted, tolerance_db)
+%   results = kaa_validateNotchFiltering(actual_data, predicted, tolerance_db, 'before_data', before_data)
 %
 %   Validates that notch filtering removed expected frequency components.
 %
@@ -10,6 +10,10 @@ function results = kaa_validateNotchFiltering(actual_data, predicted, tolerance_
 %       predicted    - Prediction structure from kaa_predictNotchOutput
 %       tolerance_db - Tolerance in dB for frequency domain comparison (default: -40)
 %
+%   Optional Parameters:
+%       before_data  - Original data before filtering (for before/after plots)
+%       plot_on_error - Whether to plot diagnostics on error (default: true)
+%
 %   Output:
 %       results      - Structure with validation results
 %
@@ -17,6 +21,20 @@ function results = kaa_validateNotchFiltering(actual_data, predicted, tolerance_
 
 if nargin < 3
     tolerance_db = -40;  % 40 dB attenuation expected
+end
+
+% Parse optional parameters
+before_data = [];
+plot_on_error = true;
+for i = 1:2:length(varargin)
+    if i+1 <= length(varargin)
+        switch lower(varargin{i})
+            case 'before_data'
+                before_data = varargin{i+1};
+            case 'plot_on_error'
+                plot_on_error = varargin{i+1};
+        end
+    end
 end
 
 results = struct();
@@ -70,6 +88,22 @@ for ch_idx = predicted.channels_affected
             results.passed = false;
             results.errors{end+1} = sprintf('Channel %d (%s): %d Hz component not sufficiently attenuated (%.1f dB)', ...
                 ch_idx, actual_data.label{ch_idx}, expected_freq, freq_power_db);
+            
+            % Plot diagnostic if enabled
+            if plot_on_error
+                fprintf('     Plotting diagnostic for channel %d...\n', ch_idx);
+                if ~isempty(before_data)
+                    % Before/after comparison
+                    kaa_plotBeforeAfter(before_data, actual_data, ch_idx, ...
+                        'title', sprintf('Notch Filter Failure: Channel %d - %d Hz not attenuated', ch_idx, expected_freq), ...
+                        'freq_range', [max(0, expected_freq-30), expected_freq+30]);
+                else
+                    % Just after spectrum
+                    kaa_plotFrequencySpectrum(actual_data, ch_idx, ...
+                        'title', sprintf('Notch Filter: Channel %d - %d Hz not attenuated (%.1f dB)', ch_idx, expected_freq, freq_power_db), ...
+                        'freq_range', [max(0, expected_freq-30), expected_freq+30]);
+                end
+            end
         end
     end
 end

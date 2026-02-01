@@ -47,7 +47,7 @@ fprintf('   Expected affected channels: %s\n', mat2str(predicted_notch.channels_
 data_notch = euFT_doBrickNotchRemoval(data, notch_filter_freqs, notch_filter_bandwidth);
 
 % Validate
-results_notch = kaa_validateNotchFiltering(data_notch, predicted_notch);
+results_notch = kaa_validateNotchFiltering(data_notch, predicted_notch, -40, 'before_data', data);
 if results_notch.passed
     fprintf('   ✓ Notch filtering test PASSED\n');
 else
@@ -73,7 +73,7 @@ fprintf('   Expected removed channels: %s\n', mat2str(predicted_lfp.channels_rem
     spike_minfreq, rect_bandfreqs, rect_lowpassfreq, rect_samprate, true);
 
 % Validate
-results_lfp = kaa_validateLFPOutput(data_lfp, predicted_lfp);
+results_lfp = kaa_validateLFPOutput(data_lfp, predicted_lfp, 0.01, 'before_data', data);
 if results_lfp.passed
     fprintf('   ✓ LFP generation test PASSED\n');
     fprintf('   Actual sampling rate: %.1f Hz\n', data_lfp.fsample);
@@ -103,7 +103,7 @@ fprintf('   Expected removed channels: %s\n', mat2str(predicted_mua.channels_rem
     spike_minfreq, rect_bandfreqs, rect_lowpassfreq, rect_samprate, true);
 
 % Validate
-results_mua = kaa_validateMUAOutput(data_mua, predicted_mua);
+results_mua = kaa_validateMUAOutput(data_mua, predicted_mua, 0.01, 'before_data', data);
 if results_mua.passed
     fprintf('   ✓ MUA generation test PASSED\n');
     fprintf('   Actual sampling rate: %.1f Hz\n', data_mua.fsample);

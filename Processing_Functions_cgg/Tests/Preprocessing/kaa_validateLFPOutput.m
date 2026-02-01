@@ -1,7 +1,7 @@
-function results = kaa_validateLFPOutput(actual_data, predicted, tolerance)
+function results = kaa_validateLFPOutput(actual_data, predicted, tolerance, varargin)
 %KAA_VALIDATELFPOUTPUT Validate LFP output
 %
-%   results = kaa_validateLFPOutput(actual_data, predicted, tolerance)
+%   results = kaa_validateLFPOutput(actual_data, predicted, tolerance, 'before_data', before_data)
 %
 %   Validates that LFP output has correct sampling rate and frequency content.
 %
@@ -10,6 +10,10 @@ function results = kaa_validateLFPOutput(actual_data, predicted, tolerance)
 %       predicted    - Prediction structure from kaa_predictLFPOutput
 %       tolerance    - Tolerance for sampling rate comparison (default: 0.01)
 %
+%   Optional Parameters:
+%       before_data  - Original data before processing (for before/after plots)
+%       plot_on_error - Whether to plot diagnostics on error (default: true)
+%
 %   Output:
 %       results      - Structure with validation results
 %
@@ -17,6 +21,20 @@ function results = kaa_validateLFPOutput(actual_data, predicted, tolerance)
 
 if nargin < 3
     tolerance = 0.01;  % 1% tolerance
+end
+
+% Parse optional parameters
+before_data = [];
+plot_on_error = true;
+for i = 1:2:length(varargin)
+    if i+1 <= length(varargin)
+        switch lower(varargin{i})
+            case 'before_data'
+                before_data = varargin{i+1};
+            case 'plot_on_error'
+                plot_on_error = varargin{i+1};
+        end
+    end
 end
 
 results = struct();
@@ -66,6 +84,22 @@ for ch_idx = predicted.channels_removed
     if power_above_cutoff / total_power > 0.1  % More than 10% above cutoff
         results.warnings{end+1} = sprintf('Channel %d (%s): Significant power above %d Hz cutoff', ...
             ch_idx, actual_data.label{ch_idx}, predicted.lfp_maxfreq);
+        
+        % Plot diagnostic if enabled
+        if plot_on_error
+            fprintf('     Plotting diagnostic for channel %d...\n', ch_idx);
+            if ~isempty(before_data)
+                % Before/after comparison
+                kaa_plotBeforeAfter(before_data, actual_data, ch_idx, ...
+                    'title', sprintf('LFP Filter: Channel %d - High frequency not attenuated', ch_idx), ...
+                    'freq_range', [0, predicted.lfp_maxfreq*2]);
+            else
+                % Just after spectrum
+                kaa_plotFrequencySpectrum(actual_data, ch_idx, ...
+                    'title', sprintf('LFP Channel %d: Significant power above %d Hz cutoff', ch_idx, predicted.lfp_maxfreq), ...
+                    'freq_range', [0, predicted.lfp_maxfreq*2]);
+            end
+        end
     end
 end
 

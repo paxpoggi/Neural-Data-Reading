@@ -107,7 +107,7 @@ try
     
     % Validate notch filtering
     predicted_notch = kaa_predictNotchOutput(data, notch_filter_freqs, notch_filter_bandwidth);
-    results_notch = kaa_validateNotchFiltering(this_recdata_notch, predicted_notch);
+    results_notch = kaa_validateNotchFiltering(this_recdata_notch, predicted_notch, -40, 'before_data', this_recdata_wideband);
     if results_notch.passed
         fprintf('   ✓ Notch filtering validation PASSED\n');
     else
@@ -135,7 +135,7 @@ try
     
     % Validate LFP
     predicted_lfp = kaa_predictLFPOutput(data, lfp_maxfreq, lfp_samprate);
-    results_lfp = kaa_validateLFPOutput(this_recdata_lfp, predicted_lfp);
+    results_lfp = kaa_validateLFPOutput(this_recdata_lfp, predicted_lfp, 0.01, 'before_data', this_recdata_wideband);
     if results_lfp.passed
         fprintf('   ✓ LFP validation PASSED\n');
         fprintf('     Sampling rate: %.1f Hz, Samples: %d\n', ...
@@ -166,7 +166,7 @@ try
     % Validate MUA
     predicted_mua = kaa_predictMUAOutput(data, spike_minfreq, rect_bandfreqs, ...
         rect_lowpassfreq, rect_samprate);
-    results_mua = kaa_validateMUAOutput(this_recdata_mua, predicted_mua);
+    results_mua = kaa_validateMUAOutput(this_recdata_mua, predicted_mua, 0.01, 'before_data', this_recdata_wideband);
     if results_mua.passed
         fprintf('   ✓ MUA validation PASSED\n');
         fprintf('     Sampling rate: %.1f Hz, Samples: %d\n', ...
