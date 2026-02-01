@@ -25,7 +25,11 @@ else
 end
 
 %% Test Results Tracking
-test_results = struct('total', 0, 'passed', 0, 'failed', 0, 'tests', {});
+test_results = struct();
+test_results.total = 0;
+test_results.passed = 0;
+test_results.failed = 0;
+test_results.tests = {};
 
 %% Test 1: Synthetic Data Preprocessing
 fprintf('\n--- Test 1: Synthetic Data Preprocessing ---\n');
