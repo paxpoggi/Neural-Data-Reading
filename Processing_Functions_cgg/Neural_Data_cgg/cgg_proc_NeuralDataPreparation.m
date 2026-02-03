@@ -687,6 +687,35 @@ save(outdatafile_TrialInformation_Table,'rectrialdeftable');
 % parfeval(@ft_info,0,'off');
 % parfeval(@ft_warning,0,'off');      
 
+% Convert table to cell array for parfor compatibility
+% Parfor has issues with table indexing, so we convert to cell array of rows
+% Safety check: ensure trialcount matches actual table height
+actual_trialcount = height(rectrialdeftable);
+if trialcount ~= actual_trialcount
+    warning('trialcount (%d) does not match rectrialdeftable height (%d). Using actual height.', ...
+        trialcount, actual_trialcount);
+    trialcount = actual_trialcount;
+end
+
+rectrialdeftable_cell = cell(trialcount, 1);
+for i = 1:trialcount
+    rectrialdeftable_cell{i} = rectrialdeftable(i, :);
+end
+
+if have_stim
+    stim_actual_trialcount = height(stimtrialdeftable);
+    if trialcount ~= stim_actual_trialcount
+        warning('trialcount (%d) does not match stimtrialdeftable height (%d).', ...
+            trialcount, stim_actual_trialcount);
+    end
+    stimtrialdeftable_cell = cell(trialcount, 1);
+    for i = 1:min(trialcount, stim_actual_trialcount)
+        stimtrialdeftable_cell{i} = stimtrialdeftable(i, :);
+    end
+else
+    stimtrialdeftable_cell = {};
+end
+
 for aidx=1:length(probe_area)
     
     this_probe_area=probe_area{aidx};
@@ -745,7 +774,13 @@ oldwarnstate = warning('off');
 % 30 ksps double-precision data takes up about 1 GB per channel-hour.
 nlFT_setMemChans(6);  
 
-this_rectrialdeftable = rectrialdeftable(tidx,:);
+% Bounds check to prevent table indexing errors
+if tidx > trialcount || tidx < 1
+    error('Trial index %d out of bounds (1-%d)', tidx, trialcount);
+end
+
+% Use cell array instead of direct table indexing for parfor compatibility
+this_rectrialdeftable = rectrialdeftable_cell{tidx};
 this_rectrialdefs = rectrialdefs(tidx,:);
 
 % Initialize stim variables to avoid parfor warning about uninitialized temporaries
@@ -754,8 +789,12 @@ this_stimtrialdefs = [];
 
 if have_stim
     try
-        this_stimtrialdeftable = stimtrialdeftable(tidx,:);
-        this_stimtrialdefs = stimtrialdefs(tidx,:);
+        if tidx <= numel(stimtrialdeftable_cell)
+            this_stimtrialdeftable = stimtrialdeftable_cell{tidx};
+            this_stimtrialdefs = stimtrialdefs(tidx,:);
+        else
+            warning('Stim trial index %d exceeds available trials (%d)', tidx, numel(stimtrialdeftable_cell));
+        end
     catch ME
         warning('Failed to get stim trial defs for trial %d: %s', tidx, ME.message);
     end
