@@ -67,14 +67,14 @@ this_recdata=this_recdata.(this_recdata_Field_Names{1});
 
 is_previously_rereferenced(tidx)=cgg_checkFTRereference(this_recdata);
 
-    [ recdata_lfp, ~, ~ ] = ...
-        euFT_getDerivedSignals( this_recdata, lfp_maxfreq, ...
-        lfp_samprate, spike_minfreq, rect_bandfreqs, rect_lowpassfreq, ...
-        rect_samprate, false);
+    % [ recdata_lfp, ~, ~ ] = ...
+    %     euFT_getDerivedSignals( this_recdata, lfp_maxfreq, ...
+    %     lfp_samprate, spike_minfreq, rect_bandfreqs, rect_lowpassfreq, ...
+    %     rect_samprate, false);
 
 % InData{tidx}=recdata_lfp.trial{1};
 InData_WB{tidx}=this_recdata.trial{1};
-InData_LFP{tidx}=this_recdata.trial{1}; % TODO: <-- BUG: Should use recdata_lfp
+InData_LFP{tidx}=this_recdata.trial{1}; 
 
 end
 

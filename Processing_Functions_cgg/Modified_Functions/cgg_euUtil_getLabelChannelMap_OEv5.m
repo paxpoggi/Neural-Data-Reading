@@ -53,7 +53,7 @@ if isok && (~isempty(chanmap))
 %   end
   
   for lidx = 1:length(oenative)
-    if oenative(lidx).bank=="CH"
+    if strcmp(oenative(lidx).bank, 'CH')
      nativelabels{lidx} = ...
       nlFT_makeFTName( oenative(lidx).bank, lidx );  
     else
@@ -64,8 +64,6 @@ if isok && (~isempty(chanmap))
   end
   
   for lidx = 1:length(oenative)
-     recordedlabels{lidx} = ...
-      nlFT_makeFTName( oenative(lidx).bank, oenative(lidx).channel );  
      recordedlabels{lidx} = ...
       nlFT_makeFTName( oenative(lidx).bank, oenative(lidx).channel );
   end
@@ -83,3 +81,4 @@ end
 
 %
 % This is the end of the file.
+

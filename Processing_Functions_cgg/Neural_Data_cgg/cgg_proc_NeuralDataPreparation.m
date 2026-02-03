@@ -654,8 +654,8 @@ if have_stim
     padtime, padtime, 'TrlStart', 'TrlEnd', trial_align_evcode, ...
     trial_metadata_events, 'codeData' );
 else
-    stimtrialdefs=zeros(trialcount,1);
-    stimtrialdeftable=zeros(trialcount,1);
+    stimtrialdefs = zeros(trialcount, size(rectrialdefs, 2));
+    stimtrialdeftable = rectrialdeftable([], :);  % Empty table with same structure
 end
 
 save(outdatafile_TrialInformation,'rectrialdefs');

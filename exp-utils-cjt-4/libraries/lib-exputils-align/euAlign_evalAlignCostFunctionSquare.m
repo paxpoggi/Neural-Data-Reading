@@ -79,8 +79,6 @@ for fidx = 1:length(firsttimes)
     totalcost = totalcost + thiscost;
   end
 
-  end
-
 
 % Done.
 end

@@ -70,7 +70,19 @@ end
 
 % Record the bad trials and remove them from the rectrials.
 BadTrials=IDX_logical_Aggregate;
-rectrialdefs_corrected=rectrialdefs(BadTrials,:);
+
+% Safety check: Warn if bad trials were found
+if any(BadTrials)
+    numBadTrials = sum(BadTrials);
+    totalTrials = length(BadTrials);
+    badTrialIndices = find(BadTrials);
+    
+    warning('cgg_procIdentifyBadTrialNumbers: Found %d bad trial(s) out of %d total trials (indices: %s).', ...
+        numBadTrials, totalTrials, mat2str(badTrialIndices));
+end
+
+% Keep only the good trials (those NOT in BadTrials)
+rectrialdefs_corrected=rectrialdefs(~BadTrials,:);
 
 end
 
