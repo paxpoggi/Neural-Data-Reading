@@ -69,6 +69,26 @@ for sidx = 1:length(cfg)
         
         fprintf('  Processing Probe Area: %s\n', this_probe_area);
         
+        % Load disconnected channels for this probe area
+        clustering_file_path = fullfile(probe_area_path, 'Connected', 'Clustering_Results.mat');
+        Disconnected_Channels = [];
+        if exist(clustering_file_path, 'file')
+            try
+                clustering_data = load(clustering_file_path);
+                if isfield(clustering_data, 'Disconnected_Channels')
+                    Disconnected_Channels = clustering_data.Disconnected_Channels(:); % Ensure column vector
+                    fprintf('    Loaded %d disconnected channels: [%s]\n', ...
+                        numel(Disconnected_Channels), num2str(Disconnected_Channels'));
+                else
+                    fprintf('    [INFO] Clustering_Results.mat found but Disconnected_Channels field missing.\n');
+                end
+            catch ME
+                warning('Failed to load disconnected channels from %s: %s', clustering_file_path, ME.message);
+            end
+        else
+            fprintf('    [INFO] Clustering_Results.mat not found at %s. No disconnected channels will be marked.\n', clustering_file_path);
+        end
+        
         %% Loop through signal types
         for stidx = 1:length(Signal_Types)
             this_signal_type = Signal_Types{stidx};
@@ -209,6 +229,34 @@ for sidx = 1:length(cfg)
                     cb1.Label.String = 'Correlation';
                     caxis([-1, 1]);
                     
+                    % Mark disconnected channels with red borders
+                    if ~isempty(Disconnected_Channels)
+                        hold on;
+                        % Find disconnected channels in sorted order
+                        disconnected_in_sorted = [];
+                        for dc_idx = 1:numel(Disconnected_Channels)
+                            orig_idx = Disconnected_Channels(dc_idx);
+                            if orig_idx <= nChannels
+                                % Find where this channel appears in sorted order
+                                sorted_pos = find(sort_order == orig_idx);
+                                if ~isempty(sorted_pos)
+                                    disconnected_in_sorted(end+1) = sorted_pos;
+                                end
+                            end
+                        end
+                        % Draw red rectangles around disconnected channels
+                        for dc_idx = 1:numel(disconnected_in_sorted)
+                            dc_pos = disconnected_in_sorted(dc_idx);
+                            % Draw vertical line
+                            plot([dc_pos-0.5, dc_pos-0.5], [0.5, nChannels+0.5], 'r-', 'LineWidth', 2);
+                            plot([dc_pos+0.5, dc_pos+0.5], [0.5, nChannels+0.5], 'r-', 'LineWidth', 2);
+                            % Draw horizontal line
+                            plot([0.5, nChannels+0.5], [dc_pos-0.5, dc_pos-0.5], 'r-', 'LineWidth', 2);
+                            plot([0.5, nChannels+0.5], [dc_pos+0.5, dc_pos+0.5], 'r-', 'LineWidth', 2);
+                        end
+                        hold off;
+                    end
+                    
                     title('Sorted by Channel Label', 'FontSize', 11);
                     xlabel('Channel (sorted)', 'FontSize', 10);
                     ylabel('Channel (sorted)', 'FontSize', 10);
@@ -229,6 +277,24 @@ for sidx = 1:length(cfg)
                     cb2 = colorbar;
                     cb2.Label.String = 'Correlation';
                     caxis([-1, 1]);
+                    
+                    % Mark disconnected channels with red borders (original order)
+                    if ~isempty(Disconnected_Channels)
+                        hold on;
+                        % Draw red rectangles around disconnected channels
+                        for dc_idx = 1:numel(Disconnected_Channels)
+                            dc_pos = Disconnected_Channels(dc_idx);
+                            if dc_pos <= nChannels
+                                % Draw vertical line
+                                plot([dc_pos-0.5, dc_pos-0.5], [0.5, nChannels+0.5], 'r-', 'LineWidth', 2);
+                                plot([dc_pos+0.5, dc_pos+0.5], [0.5, nChannels+0.5], 'r-', 'LineWidth', 2);
+                                % Draw horizontal line
+                                plot([0.5, nChannels+0.5], [dc_pos-0.5, dc_pos-0.5], 'r-', 'LineWidth', 2);
+                                plot([0.5, nChannels+0.5], [dc_pos+0.5, dc_pos+0.5], 'r-', 'LineWidth', 2);
+                            end
+                        end
+                        hold off;
+                    end
                     
                     title('Original Matrix Order', 'FontSize', 11);
                     xlabel('Channel (index)', 'FontSize', 10);

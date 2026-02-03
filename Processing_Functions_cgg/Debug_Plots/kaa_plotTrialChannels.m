@@ -66,6 +66,26 @@ for sidx = 1:length(cfg)
         
         fprintf('  Processing Probe Area: %s\n', this_probe_area);
         
+        % Load disconnected channels for this probe area
+        clustering_file_path = fullfile(probe_area_path, 'Connected', 'Clustering_Results.mat');
+        Disconnected_Channels = [];
+        if exist(clustering_file_path, 'file')
+            try
+                clustering_data = load(clustering_file_path);
+                if isfield(clustering_data, 'Disconnected_Channels')
+                    Disconnected_Channels = clustering_data.Disconnected_Channels(:); % Ensure column vector
+                    fprintf('    Loaded %d disconnected channels: [%s]\n', ...
+                        numel(Disconnected_Channels), num2str(Disconnected_Channels'));
+                else
+                    fprintf('    [INFO] Clustering_Results.mat found but Disconnected_Channels field missing.\n');
+                end
+            catch ME
+                warning('Failed to load disconnected channels from %s: %s', clustering_file_path, ME.message);
+            end
+        else
+            fprintf('    [INFO] Clustering_Results.mat not found at %s. No disconnected channels will be marked.\n', clustering_file_path);
+        end
+        
         %% Loop through signal types
         for stidx = 1:length(Signal_Types)
             this_signal_type = Signal_Types{stidx};
@@ -185,10 +205,28 @@ for sidx = 1:length(cfg)
                     for ch_idx = 1:nChannels
                         subplot(nRows, nCols, ch_idx);
                         
-                        plot(time_vec, data_matrix(ch_idx, :), 'LineWidth', Line_Width);
+                        % Check if this channel is disconnected
+                        is_disconnected = ~isempty(Disconnected_Channels) && ismember(ch_idx, Disconnected_Channels);
                         
-                        % Channel label as title (show channel number)
-                        title(sprintf('Ch %d', ch_idx), 'FontSize', Font_Size);
+                        if is_disconnected
+                            % Plot disconnected channels in red with alpha=0.6
+                            % Use Color property with RGBA for transparency (MATLAB R2020b+)
+                            % If older MATLAB version, fall back to solid red
+                            try
+                                plot(time_vec, data_matrix(ch_idx, :), 'LineWidth', Line_Width, ...
+                                    'Color', [1, 0, 0, 0.6]); % Red with alpha=0.6
+                            catch
+                                % Fallback for older MATLAB versions: use solid red
+                                plot(time_vec, data_matrix(ch_idx, :), 'LineWidth', Line_Width, ...
+                                    'Color', [1, 0, 0]); % Solid red
+                            end
+                            % Add visual indicator in title
+                            title(sprintf('Ch %d (DISCONNECTED)', ch_idx), 'FontSize', Font_Size, 'Color', [0.8, 0, 0]);
+                        else
+                            % Plot normal channels in default color
+                            plot(time_vec, data_matrix(ch_idx, :), 'LineWidth', Line_Width);
+                            title(sprintf('Ch %d', ch_idx), 'FontSize', Font_Size);
+                        end
                         
                         set(gca, 'FontSize', Font_Size);
                         axis tight;
