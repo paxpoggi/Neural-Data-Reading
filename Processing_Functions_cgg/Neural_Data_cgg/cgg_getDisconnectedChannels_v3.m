@@ -6,6 +6,8 @@ function [Connected_Channels,Disconnected_Channels,is_previously_rereferenced,De
 %
 %   This function identifies disconnected channels by clustering channel
 %   data and finding channels that cluster with known bad channels.
+%   Channels with absolute wideband values exceeding a threshold are
+%   automatically detected and added to the seed channel list.
 %
 %   Parameters:
 %       Trial_Numbers   - Array of available trial numbers
@@ -96,6 +98,35 @@ InDistance={cfg_disconnected.InDistance,cfg_disconnected.InDistance};
 NumIterations=cfg_disconnected.NumIterations;
 Disconnected_Channels_GT=cfg_disconnected.Disconnected_Channels_GT;
 Disconnected_Threshold=cfg_disconnected.Disconnected_Threshold;
+Wideband_Threshold=cfg_disconnected.Wideband_Threshold;
+
+% Store original seed channels before adding threshold-based channels
+Disconnected_Channels_GT_Original = Disconnected_Channels_GT;
+
+% Detect channels with absolute wideband values exceeding threshold
+fprintf('.. Checking for channels with absolute wideband > %d...\n', Wideband_Threshold);
+max_abs_per_channel = max(abs(InData_WB), [], 2);
+threshold_channels = find(max_abs_per_channel > Wideband_Threshold)';
+
+if ~isempty(threshold_channels)
+    fprintf('.. Found %d channel(s) exceeding threshold: [%s]\n', ...
+        numel(threshold_channels), num2str(threshold_channels));
+    fprintf('.. Max absolute values: [%s]\n', ...
+        num2str(max_abs_per_channel(threshold_channels)));
+    
+    % Combine threshold-based channels with seed channels
+    Disconnected_Channels_GT = unique([Disconnected_Channels_GT(:); threshold_channels(:)])';
+    
+    num_added = numel(setdiff(Disconnected_Channels_GT, Disconnected_Channels_GT_Original));
+    if num_added > 0
+        fprintf('.. Added %d channel(s) from threshold detection to seed list\n', num_added);
+    end
+else
+    fprintf('.. No channels exceeded wideband threshold\n');
+end
+
+fprintf('.. Combined seed channels (parameters + threshold): [%s]\n', ...
+    num2str(Disconnected_Channels_GT));
 %%
 [Connected_Channels,Disconnected_Channels,Debugging_Info] = ...
     cgg_getDisconnectedChannelsIteration_v2(InData,NumReplicates,...
