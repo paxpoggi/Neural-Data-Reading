@@ -23,8 +23,13 @@ All_Channels=1:NumChannels;
 NumGroups_Iter=length(Start_Group:End_Group);
 Disconnected_Count=cell(1,NumIterations);
 
-[~,PCA_SCORE_LFP,~,~] = fastpca(InData{1});
-[~,PCA_SCORE_WB,~,~] = fastpca(InData{2});
+% Compute PCA and save all outputs (including loadings)
+[COEFF_LFP,PCA_SCORE_LFP,LATENT_LFP,EXPLAINED_LFP] = fastpca(InData{1});
+[COEFF_WB,PCA_SCORE_WB,LATENT_WB,EXPLAINED_WB] = fastpca(InData{2});
+
+% Initialize structures to store detailed clustering results
+Clustering_Results_LFP = struct();
+Clustering_Results_WB = struct();
 
 %%
 
@@ -36,9 +41,10 @@ Disconnected_Channels_WB_iter=cell(1,NumGroups_Iter);
 for idx=Start_Group:End_Group
     %%
 NumGroups=idx;
+NumComponents = tidx;  % PCA components used (1 to NumIterations)
 
-[Group_Labels_LFP,~,~] = cgg_procChannelClustering_v4(InData{1},NumGroups,NumReplicates,InDistance{1},tidx,'PCA_SCORE',PCA_SCORE_LFP);
-[Group_Labels_WB,~,~] = cgg_procChannelClustering_v4(InData{2},NumGroups,NumReplicates,InDistance{2},tidx,'PCA_SCORE',PCA_SCORE_WB);
+[Group_Labels_LFP,Group_Distance_LFP,~] = cgg_procChannelClustering_v4(InData{1},NumGroups,NumReplicates,InDistance{1},NumComponents,'PCA_SCORE',PCA_SCORE_LFP);
+[Group_Labels_WB,Group_Distance_WB,~] = cgg_procChannelClustering_v4(InData{2},NumGroups,NumReplicates,InDistance{2},NumComponents,'PCA_SCORE',PCA_SCORE_WB);
 
 Disconnected_GT_IDX_LFP=Group_Labels_LFP(Disconnected_Channels_GT);
 Disconnected_GT_IDX_WB=Group_Labels_WB(Disconnected_Channels_GT);
@@ -58,6 +64,25 @@ Disconnected_GT_IDX_WB=[Disconnected_GT_IDX_WB;setdiff(valuesAppearingOnce_WB,Di
 
 Disconnected_Channels_LFP_iter{idx-Start_Group+1}=All_Channels(ismember(Group_Labels_LFP,Disconnected_GT_IDX_LFP));
 Disconnected_Channels_WB_iter{idx-Start_Group+1}=All_Channels(ismember(Group_Labels_WB,Disconnected_GT_IDX_WB));
+
+% Store detailed clustering results for this (NumComponents, NumGroups) combination
+field_name = sprintf('C%d_K%d', NumComponents, NumGroups);
+Clustering_Results_LFP.(field_name).Group_Labels = Group_Labels_LFP;
+Clustering_Results_LFP.(field_name).Group_Distance = Group_Distance_LFP;
+Clustering_Results_LFP.(field_name).PCA_SCORE = PCA_SCORE_LFP(:,1:min(3,NumComponents)); % Save first 3 components for plotting
+Clustering_Results_LFP.(field_name).NumComponents = NumComponents;
+Clustering_Results_LFP.(field_name).NumGroups = NumGroups;
+Clustering_Results_LFP.(field_name).Disconnected_Channels = Disconnected_Channels_LFP_iter{idx-Start_Group+1};
+Clustering_Results_LFP.(field_name).Connected_Channels = setdiff(All_Channels, Disconnected_Channels_LFP_iter{idx-Start_Group+1});
+
+Clustering_Results_WB.(field_name).Group_Labels = Group_Labels_WB;
+Clustering_Results_WB.(field_name).Group_Distance = Group_Distance_WB;
+Clustering_Results_WB.(field_name).PCA_SCORE = PCA_SCORE_WB(:,1:min(3,NumComponents)); % Save first 3 components for plotting
+Clustering_Results_WB.(field_name).NumComponents = NumComponents;
+Clustering_Results_WB.(field_name).NumGroups = NumGroups;
+Clustering_Results_WB.(field_name).Disconnected_Channels = Disconnected_Channels_WB_iter{idx-Start_Group+1};
+Clustering_Results_WB.(field_name).Connected_Channels = setdiff(All_Channels, Disconnected_Channels_WB_iter{idx-Start_Group+1});
+
 end
 %%
 Disconnected_Count{tidx}=[cell2mat(Disconnected_Channels_LFP_iter),cell2mat(Disconnected_Channels_WB_iter)];
@@ -75,9 +100,32 @@ Disconnected_IDX=Disconnected_Possible(Disconnected_Histogram_Probability(:,2)>=
 Connected_Channels=setdiff(All_Channels,Disconnected_IDX);
 Disconnected_Channels=All_Channels(Disconnected_IDX);
 
+% Store PCA results in Debugging_Info
 Debugging_Info.Disconnected_Count_Combined=Disconnected_Count_Combined;
 Debugging_Info.Disconnected_Histogram=Disconnected_Histogram;
 Debugging_Info.Disconnected_Histogram_Probability=Disconnected_Histogram_Probability;
+
+% Add PCA loadings and detailed clustering results
+Debugging_Info.PCA_Results.LFP.COEFF = COEFF_LFP;
+Debugging_Info.PCA_Results.LFP.SCORE = PCA_SCORE_LFP;
+Debugging_Info.PCA_Results.LFP.LATENT = LATENT_LFP;
+Debugging_Info.PCA_Results.LFP.EXPLAINED = EXPLAINED_LFP;
+
+Debugging_Info.PCA_Results.WB.COEFF = COEFF_WB;
+Debugging_Info.PCA_Results.WB.SCORE = PCA_SCORE_WB;
+Debugging_Info.PCA_Results.WB.LATENT = LATENT_WB;
+Debugging_Info.PCA_Results.WB.EXPLAINED = EXPLAINED_WB;
+
+% Add detailed clustering results
+Debugging_Info.Clustering_Results.LFP = Clustering_Results_LFP;
+Debugging_Info.Clustering_Results.WB = Clustering_Results_WB;
+
+% Store parameter ranges for reference
+Debugging_Info.Parameters.NumIterations = NumIterations;
+Debugging_Info.Parameters.Start_Group = Start_Group;
+Debugging_Info.Parameters.End_Group = End_Group;
+Debugging_Info.Parameters.NumReplicates = NumReplicates;
+Debugging_Info.Parameters.Disconnected_Channels_GT = Disconnected_Channels_GT;
 
 end
 
