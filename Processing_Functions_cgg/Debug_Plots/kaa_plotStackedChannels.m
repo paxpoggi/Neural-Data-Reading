@@ -180,9 +180,14 @@ for sidx = 1:length(cfg)
                         end
                     end
                     
-                    % Calculate expanded figure height (10x vertical spacing)
-                    % Each channel gets more vertical space
-                    expanded_height = Figure_Height * nChannels * 10;
+                    % Calculate expanded figure height (10x vertical spacing per channel)
+                    % Each channel gets more vertical space, but limit maximum height
+                    % Use a reasonable height per channel (e.g., 200 pixels per channel)
+                    height_per_channel = 200;
+                    expanded_height = height_per_channel * nChannels;
+                    % Cap maximum height to prevent printing issues (e.g., 50000 pixels)
+                    max_height = 50000;
+                    expanded_height = min(expanded_height, max_height);
                     
                     % Create figure with vertical subplots (one per channel)
                     if Show_Figures
@@ -190,6 +195,11 @@ for sidx = 1:length(cfg)
                     else
                         fig = figure('Position', [100, 100, Figure_Width, expanded_height], 'Visible', 'off');
                     end
+                    
+                    % Set paper size for printing large figures
+                    fig.PaperUnits = 'points';
+                    fig.PaperSize = [Figure_Width, expanded_height];
+                    fig.PaperPosition = [0, 0, Figure_Width, expanded_height];
                     
                     % Set overall title
                     sgtitle(sprintf('%s - %s - %s - Trial %d (%d channels)', ...
