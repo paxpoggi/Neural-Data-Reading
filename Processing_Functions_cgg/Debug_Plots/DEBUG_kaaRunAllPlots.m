@@ -26,6 +26,7 @@ Trial_Range = 1:5;
 % Which plots to generate
 Run_TrialChannels = true;       % Plot individual channel time series (Activity) or probe heatmaps (Epoched)
 Run_ChannelCorrelations = true; % Plot channel-channel correlation heatmaps
+Run_StackedChannels = true;     % Plot stacked waterfall-style channel plot
 
 % Figure settings for trial channel plots
 TrialChannels_Figure_Width = 1920;   % pixels
@@ -83,6 +84,19 @@ switch Data_Source
                 'Figure_Width', Correlation_Figure_Width, ...
                 'Figure_Height', Correlation_Figure_Height, ...
                 'Colormap', Correlation_Colormap, ...
+                'Show_Figures', Show_Figures);
+        end
+        
+        % Run Stacked Channels Plot
+        if Run_StackedChannels
+            fprintf('\n========================================\n');
+            fprintf('Running Stacked Channel Plots (Activity)\n');
+            fprintf('========================================\n');
+            
+            kaa_plotStackedChannels(cfg, Signal_Types, Trial_Range, ...
+                'Figure_Width', TrialChannels_Figure_Width, ...
+                'Figure_Height', TrialChannels_Figure_Height, ...
+                'Line_Width', TrialChannels_Line_Width, ...
                 'Show_Figures', Show_Figures);
         end
         

@@ -209,6 +209,37 @@ for sidx = 1:length(cfg)
                     corr_matrix_sorted = corr(data_matrix_sorted');   % Sorted by label
                     corr_matrix_original = corr(data_matrix');        % Original matrix order
                     
+                    % Mark disconnected channels by setting to NaN (will appear as white)
+                    if ~isempty(Disconnected_Channels)
+                        % For sorted matrix
+                        disconnected_in_sorted = [];
+                        for dc_idx = 1:numel(Disconnected_Channels)
+                            orig_idx = Disconnected_Channels(dc_idx);
+                            if orig_idx <= nChannels
+                                % Find where this channel appears in sorted order
+                                sorted_pos = find(sort_order == orig_idx);
+                                if ~isempty(sorted_pos)
+                                    disconnected_in_sorted(end+1) = sorted_pos;
+                                end
+                            end
+                        end
+                        % Set disconnected channel rows/columns to NaN
+                        for dc_idx = 1:numel(disconnected_in_sorted)
+                            dc_pos = disconnected_in_sorted(dc_idx);
+                            corr_matrix_sorted(dc_pos, :) = NaN;
+                            corr_matrix_sorted(:, dc_pos) = NaN;
+                        end
+                        
+                        % For original matrix
+                        for dc_idx = 1:numel(Disconnected_Channels)
+                            dc_pos = Disconnected_Channels(dc_idx);
+                            if dc_pos <= nChannels
+                                corr_matrix_original(dc_pos, :) = NaN;
+                                corr_matrix_original(:, dc_pos) = NaN;
+                            end
+                        end
+                    end
+                    
                     % Create figure with 2 subplots
                     if Show_Figures
                         fig = figure('Position', [100, 100, Figure_Width, Figure_Height]);
@@ -227,34 +258,12 @@ for sidx = 1:length(cfg)
                     colormap(Colormap_Name);
                     cb1 = colorbar;
                     cb1.Label.String = 'Correlation';
-                    caxis([-1, 1]);
-                    
-                    % Mark disconnected channels with red borders
-                    if ~isempty(Disconnected_Channels)
-                        hold on;
-                        % Find disconnected channels in sorted order
-                        disconnected_in_sorted = [];
-                        for dc_idx = 1:numel(Disconnected_Channels)
-                            orig_idx = Disconnected_Channels(dc_idx);
-                            if orig_idx <= nChannels
-                                % Find where this channel appears in sorted order
-                                sorted_pos = find(sort_order == orig_idx);
-                                if ~isempty(sorted_pos)
-                                    disconnected_in_sorted(end+1) = sorted_pos;
-                                end
-                            end
-                        end
-                        % Draw red rectangles around disconnected channels
-                        for dc_idx = 1:numel(disconnected_in_sorted)
-                            dc_pos = disconnected_in_sorted(dc_idx);
-                            % Draw vertical line
-                            plot([dc_pos-0.5, dc_pos-0.5], [0.5, nChannels+0.5], 'r-', 'LineWidth', 2);
-                            plot([dc_pos+0.5, dc_pos+0.5], [0.5, nChannels+0.5], 'r-', 'LineWidth', 2);
-                            % Draw horizontal line
-                            plot([0.5, nChannels+0.5], [dc_pos-0.5, dc_pos-0.5], 'r-', 'LineWidth', 2);
-                            plot([0.5, nChannels+0.5], [dc_pos+0.5, dc_pos+0.5], 'r-', 'LineWidth', 2);
-                        end
-                        hold off;
+                    % Dynamic colorbar based on actual data range
+                    valid_data = corr_matrix_sorted(~isnan(corr_matrix_sorted));
+                    if ~isempty(valid_data)
+                        caxis([min(valid_data), max(valid_data)]);
+                    else
+                        caxis([-1, 1]); % Fallback if all NaN
                     end
                     
                     title('Sorted by Channel Label', 'FontSize', 11);
@@ -276,24 +285,25 @@ for sidx = 1:length(cfg)
                     colormap(Colormap_Name);
                     cb2 = colorbar;
                     cb2.Label.String = 'Correlation';
-                    caxis([-1, 1]);
+                    % Dynamic colorbar based on actual data range
+                    valid_data = corr_matrix_original(~isnan(corr_matrix_original));
+                    if ~isempty(valid_data)
+                        caxis([min(valid_data), max(valid_data)]);
+                    else
+                        caxis([-1, 1]); % Fallback if all NaN
+                    end
                     
-                    % Mark disconnected channels with red borders (original order)
-                    if ~isempty(Disconnected_Channels)
-                        hold on;
-                        % Draw red rectangles around disconnected channels
-                        for dc_idx = 1:numel(Disconnected_Channels)
-                            dc_pos = Disconnected_Channels(dc_idx);
-                            if dc_pos <= nChannels
-                                % Draw vertical line
-                                plot([dc_pos-0.5, dc_pos-0.5], [0.5, nChannels+0.5], 'r-', 'LineWidth', 2);
-                                plot([dc_pos+0.5, dc_pos+0.5], [0.5, nChannels+0.5], 'r-', 'LineWidth', 2);
-                                % Draw horizontal line
-                                plot([0.5, nChannels+0.5], [dc_pos-0.5, dc_pos-0.5], 'r-', 'LineWidth', 2);
-                                plot([0.5, nChannels+0.5], [dc_pos+0.5, dc_pos+0.5], 'r-', 'LineWidth', 2);
-                            end
-                        end
-                        hold off;
+                    title('Original Matrix Order', 'FontSize', 11);
+                    xlabel('Channel (index)', 'FontSize', 10);
+                    ylabel('Channel (index)', 'FontSize', 10);
+                    
+                    axis square;
+                    set(gca, 'FontSize', 8);
+                    
+                    if nChannels > 32
+                        tick_interval = ceil(nChannels / 16);
+                        tick_positions = 1:tick_interval:nChannels;
+                        set(gca, 'XTick', tick_positions, 'YTick', tick_positions);
                     end
                     
                     title('Original Matrix Order', 'FontSize', 11);
