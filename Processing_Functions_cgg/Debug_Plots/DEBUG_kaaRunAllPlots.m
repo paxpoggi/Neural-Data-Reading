@@ -21,7 +21,7 @@ Signal_Types = {'WideBand', 'Raw', 'Notch'};
 Epoch_Name = 'Decision';
 
 % Which trials to plot (can be a range like 1:10, or specific numbers like [1, 5, 10])
-Trial_Range = 1:5;
+Trial_Range = 1:1;
 
 % Which plots to generate
 Run_TrialChannels = true;       % Plot individual channel time series (Activity) or probe heatmaps (Epoched)

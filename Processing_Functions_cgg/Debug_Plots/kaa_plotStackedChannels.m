@@ -171,11 +171,15 @@ for sidx = 1:length(cfg)
                         time_vec = 1:nSamples;
                     end
                     
+                    % Identify connected channels (exclude disconnected ones)
+                    Connected_Channels = setdiff(1:nChannels, Disconnected_Channels);
+                    nConnected = numel(Connected_Channels);
+                    
                     % Calculate Y offset range (spacing between channels)
                     % Use the range of the data to determine spacing
                     data_range = max(data_matrix(:)) - min(data_matrix(:));
                     if isempty(Y_Offset_Range)
-                        y_offset = data_range * 1.2; % 20% spacing between channels
+                        y_offset = data_range * 1.5; % Increased spacing for better visibility
                     else
                         y_offset = Y_Offset_Range;
                     end
@@ -189,27 +193,42 @@ for sidx = 1:length(cfg)
                     
                     hold on;
                     
+                    % Track y positions for connected channels only (for y-axis ticks)
+                    connected_y_positions = zeros(1, nConnected);
+                    connected_channel_numbers = zeros(1, nConnected);
+                    
                     % Plot each channel stacked vertically
+                    connected_idx = 0;
                     for ch_idx = 1:nChannels
-                        % Calculate vertical offset (channels stacked from bottom to top)
-                        y_offset_value = (nChannels - ch_idx) * y_offset;
-                        
-                        % Offset the data
-                        stacked_data = data_matrix(ch_idx, :) + y_offset_value;
-                        
                         % Check if this channel is disconnected
                         is_disconnected = ~isempty(Disconnected_Channels) && ismember(ch_idx, Disconnected_Channels);
                         
                         if is_disconnected
-                            % Plot disconnected channels in red with alpha
+                            % Skip disconnected channels in the stacking calculation
+                            % But still plot them at their original position for reference
+                            % Calculate vertical offset based on original position
+                            y_offset_value = (nChannels - ch_idx) * y_offset;
+                            stacked_data = data_matrix(ch_idx, :) + y_offset_value;
+                            
+                            % Plot disconnected channels in red with alpha (lighter/thinner)
                             try
-                                plot(time_vec, stacked_data, 'LineWidth', Line_Width, ...
-                                    'Color', [1, 0, 0, 0.6]);
+                                plot(time_vec, stacked_data, 'LineWidth', Line_Width * 0.5, ...
+                                    'Color', [1, 0, 0, 0.4]);
                             catch
-                                plot(time_vec, stacked_data, 'LineWidth', Line_Width, ...
-                                    'Color', [1, 0, 0]);
+                                plot(time_vec, stacked_data, 'LineWidth', Line_Width * 0.5, ...
+                                    'Color', [1, 0.5, 0.5]);
                             end
                         else
+                            % Plot connected channels with proper stacking
+                            connected_idx = connected_idx + 1;
+                            % Calculate vertical offset based on connected channel position
+                            y_offset_value = (nConnected - connected_idx) * y_offset;
+                            stacked_data = data_matrix(ch_idx, :) + y_offset_value;
+                            
+                            % Store position for y-axis ticks
+                            connected_y_positions(connected_idx) = y_offset_value;
+                            connected_channel_numbers(connected_idx) = ch_idx;
+                            
                             % Plot normal channels in default color
                             plot(time_vec, stacked_data, 'LineWidth', Line_Width);
                         end
@@ -220,19 +239,23 @@ for sidx = 1:length(cfg)
                     % Set labels and title
                     xlabel('Time', 'FontSize', 12);
                     ylabel('Channel (stacked)', 'FontSize', 12);
-                    title(sprintf('%s - %s - %s - Trial %d (Stacked, %d channels)', ...
-                        SessionName, this_probe_area, this_signal_type, trial_num, nChannels), ...
+                    title(sprintf('%s - %s - %s - Trial %d (Stacked, %d connected channels)', ...
+                        SessionName, this_probe_area, this_signal_type, trial_num, nConnected), ...
                         'FontSize', 10, 'Interpreter', 'none');
                     
-                    % Set Y-axis ticks to show channel numbers
-                    % Calculate tick positions (increasing order for yticks)
-                    % Channels are stacked: Ch 1 at bottom (y = (nChannels-1)*y_offset), 
-                    % Ch nChannels at top (y = 0)
-                    % yticks requires increasing values, so use [0, y_offset, 2*y_offset, ...]
-                    y_ticks = (0:(nChannels-1)) * y_offset;
-                    % Create labels matching the actual channel positions (Ch nChannels at top, Ch 1 at bottom)
-                    y_tick_labels = arrayfun(@(x) sprintf('Ch %d', nChannels - x), 0:(nChannels-1), 'UniformOutput', false);
-                    set(gca, 'YTick', y_ticks, 'YTickLabel', y_tick_labels);
+                    % Set Y-axis ticks to show only connected channel numbers
+                    % Sort by y position (increasing)
+                    [sorted_y_positions, sort_idx] = sort(connected_y_positions);
+                    sorted_channel_numbers = connected_channel_numbers(sort_idx);
+                    
+                    % Set ticks and labels
+                    set(gca, 'YTick', sorted_y_positions, ...
+                        'YTickLabel', arrayfun(@(x) sprintf('Ch %d', x), sorted_channel_numbers, 'UniformOutput', false));
+                    
+                    % Set ylim to fit only connected channels (with small padding)
+                    if nConnected > 0
+                        ylim([min(sorted_y_positions) - y_offset * 0.1, max(sorted_y_positions) + y_offset * 0.1]);
+                    end
                     
                     % Set X-axis to use full width
                     % Ensure time_vec is sorted and increasing

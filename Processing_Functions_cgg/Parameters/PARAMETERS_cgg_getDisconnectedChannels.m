@@ -87,10 +87,10 @@ switch SessionName
     case 'Ig_VU595_03_2023-03-08_A'
         switch probe_area
             case 'ACC_001'
-                Disconnected_Channels_GT = [1, 3, 5, 7, 8, 9, 11, 13, 15, 17];
+                Disconnected_Channels_GT = [];
                 annotation_found = true;
             case 'ACC_002'
-                Disconnected_Channels_GT = [1, 3, 5, 7, 8, 9, 11, 13, 15, 17, 19];
+                Disconnected_Channels_GT = [];
                 annotation_found = true;
             otherwise
                 % Probe area not annotated for this session - use defaults

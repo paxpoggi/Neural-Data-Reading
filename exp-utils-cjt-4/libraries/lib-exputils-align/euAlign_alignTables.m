@@ -270,7 +270,7 @@ end
   bestdeltalist = [];
   bestcostlist = [];
   bestfirsttimes = [];
-  if ~isempty(chosenlist)
+  if ~isempty(firstcandidates)
     [ bestdeltalist bestcostlist ] = euAlign_alignUsingSlidingWindow( ...
         firsttimesaligned, secondtimes, firstdata, seconddata, ...
         firstcandidates, thiswinrad, 'local' );
