@@ -933,74 +933,89 @@ disp(Message_Rereferencing);
 % ----------------Tring to fix artifacts across multiple channels at once problem by
 % removing bad channels with z scoring-------------------------
 %%
-% --- Build list of saved wideband trial files (produced by the first parfor)
-wbDir = outdatadir_WideBand;  % same var you used when saving
+% COMMENTED OUT: Z-score screening method for finding disconnected channels
+% % --- Build list of saved wideband trial files (produced by the first parfor)
+% wbDir = outdatadir_WideBand;  % same var you used when saving
+% wbFiles = dir(fullfile(wbDir, 'WideBand_Trial_*.mat'));
+% assert(~isempty(wbFiles), 'No WideBand_Trial_*.mat files found in %s', wbDir);
+% 
+% % --- Pick ~10 trials deterministically or randomly
+% nTot = numel(wbFiles);
+% nSampleTrials = min(10, nTot);
+% rng(0);   % optional reproducibility
+% pick = randperm(nTot, nSampleTrials);   % or pick = 1:nSampleTrials;
+% 
+% % --- Load the first picked trial to get labels & Connected_Channels mapping
+% S0 = load(fullfile(wbDir, wbFiles(pick(1)).name), 'this_recdata_wideband');
+% labels = S0.this_recdata_wideband.label;
+% 
+% % IMPORTANT: translate Connected_Channels (indices) -> labels AFTER remap
+% refLabels0 = labels(Connected_Channels);
+% refIdx = match_str(labels, refLabels0);
+% 
+% % --- Concatenate candidate reference data across the chosen trials
+% Xcat = [];   % [nRef x total_time_across_10_trials]
+% for ii = 1:numel(pick)
+%     Si = load(fullfile(wbDir, wbFiles(pick(ii)).name), 'this_recdata_wideband');
+%     Xi = Si.this_recdata_wideband.trial{1}(refIdx,:);   % each file has 1 trial
+%     % Optional: Xi = Xi(:,1:2:end);  % light decimation to save RAM
+%     Xcat = [Xcat, Xi]; %#ok<AGROW>
+% end
+% 
+% % --- Robust per-channel stats across all sampled data
+% medc = median(Xcat, 2);
+% madc = mad(Xcat, 1, 2);
+% rZ   = (Xcat - medc) ./ max(madc, eps);
+% 
+% fracHi = mean(abs(rZ) > 7, 2);      % threshold 7 robust SDs
+% keep   = isfinite(medc) & isfinite(madc) & fracHi < 0.01;
+% 
+% % --- Final, stable ref list (labels)
+% refLabelsGood = labels(refIdx(keep));
+% 
+% % (Optional but wise) require a minimum ref size
+% if numel(refLabelsGood) < max(3, ceil(0.2*numel(refLabels0)))
+%     warning('Few stable ref channels survived (%d/%d). Consider local CAR or looser thresholds.', ...
+%             numel(refLabelsGood), numel(refLabels0));
+% end
+% 
+% % 1) Find which of the originally Connected didn't survive z-screening
+% origConnLabels = labels(Connected_Channels);
+% badZLabels     = setdiff(origConnLabels, refLabelsGood, 'stable');  % Connected \ Good
+% 
+% % 2) Map those labels back to indices in the current label order
+% badZIdx = match_str(labels, badZLabels);   % row indices into data/trial matrices
+% 
+% % 3) Update the Connected/Disconnected lists
+% Disconnected_Channels = unique([Disconnected_Channels(:); badZIdx(:)]);  % add; uniq
+% Connected_Channels    = setdiff(Connected_Channels(:), badZIdx(:), 'stable');
+% 
+% % 4) Persist the updated lists so later stages see the change
+% m_Cluster = matfile(this_area_clustering_file_name, 'Writable', true);
+% m_Cluster.Connected_Channels    = Connected_Channels;
+% m_Cluster.Disconnected_Channels = Disconnected_Channels;
+% 
+% % 5) (Optional) print a short report
+% fprintf('Z-screen removed %d ref channels; Connected now %d; Disconnected now %d.\n', ...
+%         numel(badZIdx), numel(Connected_Channels), numel(Disconnected_Channels));
+% 
+% % Recompute "good" ref set but restricted to current Connected (safety)
+% procLabels = labels(Connected_Channels);                         % channels we'll keep/process
+% goodRef    = intersect(refLabelsGood, procLabels, 'stable');     % ref = Good ∩ Connected
+
+% Use Connected_Channels directly for reference (without Z-score screening)
+% Load labels from first wideband trial file to get channel labels
+wbDir = outdatadir_WideBand;
 wbFiles = dir(fullfile(wbDir, 'WideBand_Trial_*.mat'));
-assert(~isempty(wbFiles), 'No WideBand_Trial_*.mat files found in %s', wbDir);
-
-% --- Pick ~10 trials deterministically or randomly
-nTot = numel(wbFiles);
-nSampleTrials = min(10, nTot);
-rng(0);   % optional reproducibility
-pick = randperm(nTot, nSampleTrials);   % or pick = 1:nSampleTrials;
-
-% --- Load the first picked trial to get labels & Connected_Channels mapping
-S0 = load(fullfile(wbDir, wbFiles(pick(1)).name), 'this_recdata_wideband');
-labels = S0.this_recdata_wideband.label;
-
-% IMPORTANT: translate Connected_Channels (indices) -> labels AFTER remap
-refLabels0 = labels(Connected_Channels);
-refIdx = match_str(labels, refLabels0);
-
-% --- Concatenate candidate reference data across the chosen trials
-Xcat = [];   % [nRef x total_time_across_10_trials]
-for ii = 1:numel(pick)
-    Si = load(fullfile(wbDir, wbFiles(pick(ii)).name), 'this_recdata_wideband');
-    Xi = Si.this_recdata_wideband.trial{1}(refIdx,:);   % each file has 1 trial
-    % Optional: Xi = Xi(:,1:2:end);  % light decimation to save RAM
-    Xcat = [Xcat, Xi]; %#ok<AGROW>
+if ~isempty(wbFiles)
+    S0 = load(fullfile(wbDir, wbFiles(1).name), 'this_recdata_wideband');
+    labels = S0.this_recdata_wideband.label;
+    procLabels = labels(Connected_Channels);  % channels we'll keep/process
+    goodRef = procLabels;  % use all Connected channels as reference
+else
+    % Fallback: use Connected_Channels indices directly
+    goodRef = Connected_Channels;
 end
-
-% --- Robust per-channel stats across all sampled data
-medc = median(Xcat, 2);
-madc = mad(Xcat, 1, 2);
-rZ   = (Xcat - medc) ./ max(madc, eps);
-
-fracHi = mean(abs(rZ) > 7, 2);      % threshold 7 robust SDs
-keep   = isfinite(medc) & isfinite(madc) & fracHi < 0.01;
-
-% --- Final, stable ref list (labels)
-refLabelsGood = labels(refIdx(keep));
-
-% (Optional but wise) require a minimum ref size
-if numel(refLabelsGood) < max(3, ceil(0.2*numel(refLabels0)))
-    warning('Few stable ref channels survived (%d/%d). Consider local CAR or looser thresholds.', ...
-            numel(refLabelsGood), numel(refLabels0));
-end
-
-% 1) Find which of the originally Connected didn't survive z-screening
-origConnLabels = labels(Connected_Channels);
-badZLabels     = setdiff(origConnLabels, refLabelsGood, 'stable');  % Connected \ Good
-
-% 2) Map those labels back to indices in the current label order
-badZIdx = match_str(labels, badZLabels);   % row indices into data/trial matrices
-
-% 3) Update the Connected/Disconnected lists
-Disconnected_Channels = unique([Disconnected_Channels(:); badZIdx(:)]);  % add; uniq
-Connected_Channels    = setdiff(Connected_Channels(:), badZIdx(:), 'stable');
-
-% 4) Persist the updated lists so later stages see the change
-m_Cluster = matfile(this_area_clustering_file_name, 'Writable', true);
-m_Cluster.Connected_Channels    = Connected_Channels;
-m_Cluster.Disconnected_Channels = Disconnected_Channels;
-
-% 5) (Optional) print a short report
-fprintf('Z-screen removed %d ref channels; Connected now %d; Disconnected now %d.\n', ...
-        numel(badZIdx), numel(Connected_Channels), numel(Disconnected_Channels));
-
-% Recompute "good" ref set but restricted to current Connected (safety)
-procLabels = labels(Connected_Channels);                         % channels we'll keep/process
-goodRef    = intersect(refLabelsGood, procLabels, 'stable');     % ref = Good ∩ Connected
 
 % --- Build cfg for reref using labels (not indices)
 if want_rereference
