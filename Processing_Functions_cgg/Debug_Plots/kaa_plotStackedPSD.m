@@ -1,9 +1,9 @@
-function kaa_plotStackedChannels(cfg, Signal_Types, Trial_Range, varargin)
-%KAA_PLOTSTACKEDCHANNELS Plot all channels in vertical subplots
+function kaa_plotStackedPSD(cfg, Signal_Types, Trial_Range, varargin)
+%KAA_PLOTSTACKEDPSD Plot power spectral density for all channels in vertical subplots
 %
 %   Creates a figure with vertical subplots, one per channel. Each subplot
-%   shows the time series for that channel. X-axis is time (full width),
-%   Y-axis is independent for each channel. Disconnected channels are
+%   shows the power spectral density (PSD) for that channel. X-axis is frequency,
+%   Y-axis is power (independent for each channel). Disconnected channels are
 %   marked in red.
 %
 %   Inputs:
@@ -16,6 +16,9 @@ function kaa_plotStackedChannels(cfg, Signal_Types, Trial_Range, varargin)
 %     'Figure_Height' - Figure height in pixels (default: 1080)
 %     'Line_Width'    - Line width for plots (default: 0.5)
 %     'Show_Figures'  - Show figures while processing (default: false)
+%     'PSD_Method'    - Method for PSD: 'pwelch' (default) or 'pspectrum'
+%     'Window_Length' - Window length for pwelch in samples (default: auto)
+%     'Overlap'       - Overlap fraction for pwelch (default: 0.5)
 %
 %   Author: KAA
 
@@ -24,6 +27,9 @@ Figure_Width = CheckVararginPairs('Figure_Width', 1920, varargin{:});
 Figure_Height = CheckVararginPairs('Figure_Height', 1080, varargin{:});
 Line_Width = CheckVararginPairs('Line_Width', 0.5, varargin{:});
 Show_Figures = CheckVararginPairs('Show_Figures', false, varargin{:});
+PSD_Method = CheckVararginPairs('PSD_Method', 'pwelch', varargin{:});
+Window_Length = CheckVararginPairs('Window_Length', [], varargin{:});
+Overlap = CheckVararginPairs('Overlap', 0.5, varargin{:});
 
 %% Process each session
 for sidx = 1:length(cfg)
@@ -32,7 +38,7 @@ for sidx = 1:length(cfg)
     ExperimentName = cfg(sidx).ExperimentName;
     SessionName = cfg(sidx).SessionName;
     
-    fprintf('\n=== Processing Session: %s (Stacked Plots) ===\n', SessionName);
+    fprintf('\n=== Processing Session: %s (PSD Plots) ===\n', SessionName);
     
     % Get the session output folder path
     session_path = fullfile(outdatadir, ExperimentName, SessionName, 'Activity');
@@ -89,7 +95,7 @@ for sidx = 1:length(cfg)
             
             fprintf('    Processing Signal Type: %s\n', this_signal_type);
             
-            % Create output folder (same as trial channels)
+            % Create output folder
             output_base = strrep(outdatadir, 'Data_Neural', 'debug_plots');
             output_path = fullfile(output_base, ExperimentName, SessionName, 'Activity', this_probe_area, this_signal_type);
             
@@ -163,29 +169,30 @@ for sidx = 1:length(cfg)
                     data_matrix = ft_struct.trial{1};
                     [nChannels, nSamples] = size(data_matrix);
                     
-                    % Get time vector if available
-                    if isfield(ft_struct, 'time') && ~isempty(ft_struct.time)
-                        time_vec = ft_struct.time{1};
+                    % Get sampling rate
+                    if isfield(ft_struct, 'fsample') && ~isempty(ft_struct.fsample)
+                        fs = ft_struct.fsample;
+                    elseif isfield(ft_struct, 'hdr') && isfield(ft_struct.hdr, 'Fs')
+                        fs = ft_struct.hdr.Fs;
                     else
-                        time_vec = 1:nSamples;
-                    end
-                    
-                    % Ensure time_vec is sorted and increasing
-                    if any(diff(time_vec) < 0)
-                        warning('Time vector is not monotonically increasing. Sorting...');
-                        [time_vec, sort_idx] = sort(time_vec);
-                        % Re-sort data_matrix accordingly
-                        for ch_idx = 1:nChannels
-                            data_matrix(ch_idx, :) = data_matrix(ch_idx, sort_idx);
+                        % Try to infer from time vector
+                        if isfield(ft_struct, 'time') && ~isempty(ft_struct.time)
+                            time_vec = ft_struct.time{1};
+                            if length(time_vec) > 1
+                                fs = 1 / (time_vec(2) - time_vec(1));
+                            else
+                                warning('Cannot determine sampling rate. Using default 30000 Hz.');
+                                fs = 30000;
+                            end
+                        else
+                            warning('Cannot determine sampling rate. Using default 30000 Hz.');
+                            fs = 30000;
                         end
                     end
                     
-                    % Calculate expanded figure height (10x vertical spacing per channel)
-                    % Each channel gets more vertical space, but limit maximum height
-                    % Use a reasonable height per channel (e.g., 200 pixels per channel)
+                    % Calculate expanded figure height
                     height_per_channel = 200;
                     expanded_height = height_per_channel * nChannels;
-                    % Cap maximum height to prevent printing issues (e.g., 50000 pixels)
                     max_height = 50000;
                     expanded_height = min(expanded_height, max_height);
                     
@@ -202,20 +209,49 @@ for sidx = 1:length(cfg)
                     fig.PaperPosition = [0, 0, Figure_Width, expanded_height];
                     
                     % Set overall title
-                    sgtitle(sprintf('%s - %s - %s - Trial %d (%d channels)', ...
-                        SessionName, this_probe_area, this_signal_type, trial_num, nChannels), ...
+                    sgtitle(sprintf('%s - %s - %s - Trial %d PSD (%d channels, fs=%.1f Hz)', ...
+                        SessionName, this_probe_area, this_signal_type, trial_num, nChannels, fs), ...
                         'FontSize', 14, 'Interpreter', 'none');
                     
+                    % Determine window length for pwelch if not specified
+                    if isempty(Window_Length)
+                        % Use a reasonable window length (e.g., 1/8 of the data length)
+                        Window_Length = max(256, round(nSamples / 8));
+                    end
+                    
                     % Create vertical subplots with increased spacing
-                    % Use subplot with manual spacing to spread them out
                     for ch_idx = 1:nChannels
                         % Calculate subplot position with spacing
-                        % Each subplot gets 1/nChannels of the height, with gaps between
-                        subplot_height = 0.9 / nChannels;  % Use 90% of height, leave 10% for spacing
+                        subplot_height = 0.9 / nChannels;
                         subplot_bottom = 0.05 + (nChannels - ch_idx) * (0.9 / nChannels);
                         
                         % Create subplot with specific position
                         subplot('Position', [0.1, subplot_bottom, 0.85, subplot_height]);
+                        
+                        % Compute PSD for this channel
+                        channel_data = data_matrix(ch_idx, :);
+                        
+                        % Remove NaN and Inf values
+                        valid_idx = isfinite(channel_data);
+                        if sum(valid_idx) < Window_Length
+                            warning('Channel %d has insufficient valid samples for PSD', ch_idx);
+                            continue;
+                        end
+                        channel_data = channel_data(valid_idx);
+                        
+                        % Compute PSD
+                        if strcmpi(PSD_Method, 'pspectrum')
+                            % Use pspectrum (requires Signal Processing Toolbox)
+                            try
+                                [pxx, f] = pspectrum(channel_data, fs);
+                            catch
+                                % Fallback to pwelch if pspectrum fails
+                                [pxx, f] = pwelch(channel_data, Window_Length, round(Window_Length * Overlap), [], fs);
+                            end
+                        else
+                            % Use pwelch (default)
+                            [pxx, f] = pwelch(channel_data, Window_Length, round(Window_Length * Overlap), [], fs);
+                        end
                         
                         % Check if this channel is disconnected
                         is_disconnected = ~isempty(Disconnected_Channels) && ismember(ch_idx, Disconnected_Channels);
@@ -223,36 +259,35 @@ for sidx = 1:length(cfg)
                         if is_disconnected
                             % Plot disconnected channels in red with alpha
                             try
-                                plot(time_vec, data_matrix(ch_idx, :), 'LineWidth', Line_Width, ...
-                                    'Color', [1, 0, 0, 0.6]);
+                                semilogy(f, pxx, 'LineWidth', Line_Width, 'Color', [1, 0, 0, 0.6]);
                             catch
-                                plot(time_vec, data_matrix(ch_idx, :), 'LineWidth', Line_Width, ...
-                                    'Color', [1, 0, 0]);
+                                semilogy(f, pxx, 'LineWidth', Line_Width, 'Color', [1, 0, 0]);
                             end
                             title(sprintf('Ch %d', ch_idx), 'FontSize', 12, 'Color', [0.8, 0, 0]);
                         else
                             % Plot normal channels in default color
-                            plot(time_vec, data_matrix(ch_idx, :), 'LineWidth', Line_Width);
+                            semilogy(f, pxx, 'LineWidth', Line_Width);
                             title(sprintf('Ch %d', ch_idx), 'FontSize', 12);
                         end
                         
                         % Set axis properties
                         axis tight;
                         set(gca, 'FontSize', 10);
+                        grid on;
                         
                         % Only show xlabel on bottom subplot
                         if ch_idx == nChannels
-                            xlabel('Time', 'FontSize', 12);
+                            xlabel('Frequency (Hz)', 'FontSize', 12);
                         else
                             set(gca, 'XTickLabel', []);
                         end
                         
                         % Y-axis is independent for each subplot (not shared)
-                        ylabel(sprintf('Ch %d', ch_idx), 'FontSize', 10);
+                        ylabel(sprintf('PSD Ch %d', ch_idx), 'FontSize', 10);
                     end
                     
                     % Save figure as PNG
-                    output_file_name = sprintf('%s_Stacked_Trial_%d.png', this_signal_type, trial_num);
+                    output_file_name = sprintf('%s_PSD_Trial_%d.png', this_signal_type, trial_num);
                     output_file_path = fullfile(output_path, output_file_name);
                     
                     print(fig, output_file_path, '-dpng', '-r150');
@@ -275,7 +310,7 @@ for sidx = 1:length(cfg)
     
 end % session loop
 
-fprintf('\n=== Stacked channel plotting complete ===\n');
+fprintf('\n=== Stacked PSD plotting complete ===\n');
 
 end
 
