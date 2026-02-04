@@ -180,11 +180,15 @@ for sidx = 1:length(cfg)
                         end
                     end
                     
+                    % Calculate expanded figure height (10x vertical spacing)
+                    % Each channel gets more vertical space
+                    expanded_height = Figure_Height * nChannels * 10;
+                    
                     % Create figure with vertical subplots (one per channel)
                     if Show_Figures
-                        fig = figure('Position', [100, 100, Figure_Width, Figure_Height]);
+                        fig = figure('Position', [100, 100, Figure_Width, expanded_height]);
                     else
-                        fig = figure('Position', [100, 100, Figure_Width, Figure_Height], 'Visible', 'off');
+                        fig = figure('Position', [100, 100, Figure_Width, expanded_height], 'Visible', 'off');
                     end
                     
                     % Set overall title
@@ -192,9 +196,16 @@ for sidx = 1:length(cfg)
                         SessionName, this_probe_area, this_signal_type, trial_num, nChannels), ...
                         'FontSize', 10, 'Interpreter', 'none');
                     
-                    % Create vertical subplots (nChannels rows, 1 column)
+                    % Create vertical subplots with increased spacing
+                    % Use subplot with manual spacing to spread them out
                     for ch_idx = 1:nChannels
-                        subplot(nChannels, 1, ch_idx);
+                        % Calculate subplot position with spacing
+                        % Each subplot gets 1/nChannels of the height, with gaps between
+                        subplot_height = 0.9 / nChannels;  % Use 90% of height, leave 10% for spacing
+                        subplot_bottom = 0.05 + (nChannels - ch_idx) * (0.9 / nChannels);
+                        
+                        % Create subplot with specific position
+                        subplot('Position', [0.1, subplot_bottom, 0.85, subplot_height]);
                         
                         % Check if this channel is disconnected
                         is_disconnected = ~isempty(Disconnected_Channels) && ismember(ch_idx, Disconnected_Channels);
@@ -208,26 +219,26 @@ for sidx = 1:length(cfg)
                                 plot(time_vec, data_matrix(ch_idx, :), 'LineWidth', Line_Width, ...
                                     'Color', [1, 0, 0]);
                             end
-                            title(sprintf('Ch %d', ch_idx), 'FontSize', 8, 'Color', [0.8, 0, 0]);
+                            title(sprintf('Ch %d', ch_idx), 'FontSize', 10, 'Color', [0.8, 0, 0]);
                         else
                             % Plot normal channels in default color
                             plot(time_vec, data_matrix(ch_idx, :), 'LineWidth', Line_Width);
-                            title(sprintf('Ch %d', ch_idx), 'FontSize', 8);
+                            title(sprintf('Ch %d', ch_idx), 'FontSize', 10);
                         end
                         
                         % Set axis properties
                         axis tight;
-                        set(gca, 'FontSize', 6);
+                        set(gca, 'FontSize', 8);
                         
                         % Only show xlabel on bottom subplot
                         if ch_idx == nChannels
-                            xlabel('Time', 'FontSize', 8);
+                            xlabel('Time', 'FontSize', 10);
                         else
                             set(gca, 'XTickLabel', []);
                         end
                         
                         % Y-axis is independent for each subplot (not shared)
-                        ylabel(sprintf('Ch %d', ch_idx), 'FontSize', 6);
+                        ylabel(sprintf('Ch %d', ch_idx), 'FontSize', 8);
                     end
                     
                     % Save figure as PNG
