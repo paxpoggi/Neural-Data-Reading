@@ -1,10 +1,10 @@
 function kaa_plotStackedPSD(cfg, Signal_Types, Trial_Range, varargin)
-%KAA_PLOTSTACKEDPSD Plot power spectral density for all channels in vertical subplots
+%KAA_PLOTSTACKEDPSD Plot power spectral density for all channels in grid layout
 %
-%   Creates a figure with vertical subplots, one per channel. Each subplot
-%   shows the power spectral density (PSD) for that channel. X-axis is frequency,
-%   Y-axis is power (independent for each channel). Disconnected channels are
-%   marked in red.
+%   Creates a figure with a grid of subplots (square-ish layout), one per channel.
+%   Each subplot shows the power spectral density (PSD) for that channel.
+%   X-axis is frequency (truncated to 0-130 Hz), Y-axis is power (independent
+%   for each channel). Disconnected channels are marked in red.
 %
 %   Inputs:
 %     cfg          - Session configuration from DATA_cggAllSessionInformationConfiguration
@@ -190,43 +190,31 @@ for sidx = 1:length(cfg)
                         end
                     end
                     
-                    % Calculate expanded figure height
-                    height_per_channel = 200;
-                    expanded_height = height_per_channel * nChannels;
-                    max_height = 50000;
-                    expanded_height = min(expanded_height, max_height);
-                    
-                    % Create figure with vertical subplots (one per channel)
-                    if Show_Figures
-                        fig = figure('Position', [100, 100, Figure_Width, expanded_height]);
-                    else
-                        fig = figure('Position', [100, 100, Figure_Width, expanded_height], 'Visible', 'off');
-                    end
-                    
-                    % Set paper size for printing large figures
-                    fig.PaperUnits = 'points';
-                    fig.PaperSize = [Figure_Width, expanded_height];
-                    fig.PaperPosition = [0, 0, Figure_Width, expanded_height];
-                    
-                    % Set overall title
-                    sgtitle(sprintf('%s - %s - %s - Trial %d PSD (%d channels, fs=%.1f Hz)', ...
-                        SessionName, this_probe_area, this_signal_type, trial_num, nChannels, fs), ...
-                        'FontSize', 14, 'Interpreter', 'none');
-                    
                     % Determine window length for pwelch if not specified
                     if isempty(Window_Length)
                         % Use a reasonable window length (e.g., 1/8 of the data length)
                         Window_Length = max(256, round(nSamples / 8));
                     end
                     
-                    % Create vertical subplots with increased spacing
+                    % Calculate subplot grid (square-ish, similar to kaa_plotTrialChannels.m)
+                    nCols = ceil(sqrt(nChannels));
+                    nRows = ceil(nChannels / nCols);
+                    
+                    % Create figure with fixed dimensions (grid layout)
+                    if Show_Figures
+                        fig = figure('Position', [100, 100, Figure_Width, Figure_Height]);
+                    else
+                        fig = figure('Position', [100, 100, Figure_Width, Figure_Height], 'Visible', 'off');
+                    end
+                    
+                    % Set overall title
+                    sgtitle(sprintf('%s - %s - %s - Trial %d PSD (%d channels, fs=%.1f Hz, 0-130 Hz)', ...
+                        SessionName, this_probe_area, this_signal_type, trial_num, nChannels, fs), ...
+                        'FontSize', 14, 'Interpreter', 'none');
+                    
+                    % Plot each channel in grid layout
                     for ch_idx = 1:nChannels
-                        % Calculate subplot position with spacing
-                        subplot_height = 0.9 / nChannels;
-                        subplot_bottom = 0.05 + (nChannels - ch_idx) * (0.9 / nChannels);
-                        
-                        % Create subplot with specific position
-                        subplot('Position', [0.1, subplot_bottom, 0.85, subplot_height]);
+                        subplot(nRows, nCols, ch_idx);
                         
                         % Compute PSD for this channel
                         channel_data = data_matrix(ch_idx, :);
@@ -253,37 +241,36 @@ for sidx = 1:length(cfg)
                             [pxx, f] = pwelch(channel_data, Window_Length, round(Window_Length * Overlap), [], fs);
                         end
                         
+                        % Truncate to 0-130 Hz
+                        freq_idx = f <= 130;
+                        f_truncated = f(freq_idx);
+                        pxx_truncated = pxx(freq_idx);
+                        
                         % Check if this channel is disconnected
                         is_disconnected = ~isempty(Disconnected_Channels) && ismember(ch_idx, Disconnected_Channels);
                         
                         if is_disconnected
                             % Plot disconnected channels in red with alpha
                             try
-                                semilogy(f, pxx, 'LineWidth', Line_Width, 'Color', [1, 0, 0, 0.6]);
+                                semilogy(f_truncated, pxx_truncated, 'LineWidth', Line_Width, 'Color', [1, 0, 0, 0.6]);
                             catch
-                                semilogy(f, pxx, 'LineWidth', Line_Width, 'Color', [1, 0, 0]);
+                                semilogy(f_truncated, pxx_truncated, 'LineWidth', Line_Width, 'Color', [1, 0, 0]);
                             end
                             title(sprintf('Ch %d', ch_idx), 'FontSize', 12, 'Color', [0.8, 0, 0]);
                         else
                             % Plot normal channels in default color
-                            semilogy(f, pxx, 'LineWidth', Line_Width);
+                            semilogy(f_truncated, pxx_truncated, 'LineWidth', Line_Width);
                             title(sprintf('Ch %d', ch_idx), 'FontSize', 12);
                         end
                         
                         % Set axis properties
+                        xlim([0, 130]); % Explicitly set x-axis limits to 0-130 Hz
                         axis tight;
                         set(gca, 'FontSize', 10);
                         grid on;
                         
-                        % Only show xlabel on bottom subplot
-                        if ch_idx == nChannels
-                            xlabel('Frequency (Hz)', 'FontSize', 12);
-                        else
-                            set(gca, 'XTickLabel', []);
-                        end
-                        
-                        % Y-axis is independent for each subplot (not shared)
-                        ylabel(sprintf('PSD Ch %d', ch_idx), 'FontSize', 10);
+                        % Keep y-axis values visible for all subplots (like kaa_plotTrialChannels.m)
+                        % No special handling for xlabel - let MATLAB handle it naturally
                     end
                     
                     % Save figure as PNG
