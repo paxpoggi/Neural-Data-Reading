@@ -133,7 +133,7 @@ NumReplicates=10; %10
 InDistance='sqeuclidean';
 NumIterations=20;
 Disconnected_Threshold=0.5;
-Wideband_Threshold=5000; % Channels with absolute wideband values exceeding this threshold will be added to seed list
+Wideband_Threshold=3500; % Channels with absolute wideband values exceeding this threshold will be added to seed list
 
 w = whos;
 for a = 1:length(w)

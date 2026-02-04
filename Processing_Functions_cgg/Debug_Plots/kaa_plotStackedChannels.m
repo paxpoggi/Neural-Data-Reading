@@ -73,7 +73,7 @@ for sidx = 1:length(cfg)
                         numel(Disconnected_Channels), num2str(Disconnected_Channels'));
                 end
             catch ME
-                warning('Failed to load disconnected channels: %s', ME.message);
+                warning(ME.identifier, 'Failed to load disconnected channels: %s', ME.message);
             end
         end
         
@@ -225,12 +225,26 @@ for sidx = 1:length(cfg)
                         'FontSize', 10, 'Interpreter', 'none');
                     
                     % Set Y-axis ticks to show channel numbers
-                    y_ticks = (nChannels:-1:1) * y_offset;
-                    y_tick_labels = arrayfun(@(x) sprintf('Ch %d', x), nChannels:-1:1, 'UniformOutput', false);
+                    % Calculate tick positions (increasing order for yticks)
+                    % Channels are stacked: Ch 1 at bottom (y = (nChannels-1)*y_offset), 
+                    % Ch nChannels at top (y = 0)
+                    % yticks requires increasing values, so use [0, y_offset, 2*y_offset, ...]
+                    y_ticks = (0:(nChannels-1)) * y_offset;
+                    % Create labels matching the actual channel positions (Ch nChannels at top, Ch 1 at bottom)
+                    y_tick_labels = arrayfun(@(x) sprintf('Ch %d', nChannels - x), 0:(nChannels-1), 'UniformOutput', false);
                     set(gca, 'YTick', y_ticks, 'YTickLabel', y_tick_labels);
                     
                     % Set X-axis to use full width
-                    xlim([time_vec(1), time_vec(end)]);
+                    % Ensure time_vec is sorted and increasing
+                    if any(diff(time_vec) < 0)
+                        warning('Time vector is not monotonically increasing. Sorting...');
+                        [time_vec, sort_idx] = sort(time_vec);
+                        % Re-sort data_matrix accordingly
+                        for ch_idx = 1:nChannels
+                            data_matrix(ch_idx, :) = data_matrix(ch_idx, sort_idx);
+                        end
+                    end
+                    xlim([min(time_vec), max(time_vec)]);
                     
                     grid on;
                     set(gca, 'FontSize', 8);
