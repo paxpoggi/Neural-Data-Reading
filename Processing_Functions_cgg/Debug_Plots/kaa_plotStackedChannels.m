@@ -1,9 +1,10 @@
 function kaa_plotStackedChannels(cfg, Signal_Types, Trial_Range, varargin)
-%KAA_PLOTSTACKEDCHANNELS Plot all channels stacked vertically (waterfall style)
+%KAA_PLOTSTACKEDCHANNELS Plot all channels in vertical subplots
 %
-%   Creates a stacked line plot where each channel is offset vertically
-%   but lines can overlap based on amplitude. X-axis is time (full width),
-%   Y-axis shows stacked channel values.
+%   Creates a figure with vertical subplots, one per channel. Each subplot
+%   shows the time series for that channel. X-axis is time (full width),
+%   Y-axis is independent for each channel. Disconnected channels are
+%   marked in red.
 %
 %   Inputs:
 %     cfg          - Session configuration from DATA_cggAllSessionInformationConfiguration
@@ -15,7 +16,6 @@ function kaa_plotStackedChannels(cfg, Signal_Types, Trial_Range, varargin)
 %     'Figure_Height' - Figure height in pixels (default: 1080)
 %     'Line_Width'    - Line width for plots (default: 0.5)
 %     'Show_Figures'  - Show figures while processing (default: false)
-%     'Y_Offset_Range' - Vertical spacing between channels (default: auto)
 %
 %   Author: KAA
 
@@ -24,7 +24,6 @@ Figure_Width = CheckVararginPairs('Figure_Width', 1920, varargin{:});
 Figure_Height = CheckVararginPairs('Figure_Height', 1080, varargin{:});
 Line_Width = CheckVararginPairs('Line_Width', 0.5, varargin{:});
 Show_Figures = CheckVararginPairs('Show_Figures', false, varargin{:});
-Y_Offset_Range = CheckVararginPairs('Y_Offset_Range', [], varargin{:});
 
 %% Process each session
 for sidx = 1:length(cfg)
@@ -171,93 +170,6 @@ for sidx = 1:length(cfg)
                         time_vec = 1:nSamples;
                     end
                     
-                    % Identify connected channels (exclude disconnected ones)
-                    Connected_Channels = setdiff(1:nChannels, Disconnected_Channels);
-                    nConnected = numel(Connected_Channels);
-                    
-                    % Calculate Y offset range (spacing between channels)
-                    % Use the range of the data to determine spacing
-                    data_range = max(data_matrix(:)) - min(data_matrix(:));
-                    if isempty(Y_Offset_Range)
-                        y_offset = data_range * 1.5; % Increased spacing for better visibility
-                    else
-                        y_offset = Y_Offset_Range;
-                    end
-                    
-                    % Create figure
-                    if Show_Figures
-                        fig = figure('Position', [100, 100, Figure_Width, Figure_Height]);
-                    else
-                        fig = figure('Position', [100, 100, Figure_Width, Figure_Height], 'Visible', 'off');
-                    end
-                    
-                    hold on;
-                    
-                    % Track y positions for connected channels only (for y-axis ticks)
-                    connected_y_positions = zeros(1, nConnected);
-                    connected_channel_numbers = zeros(1, nConnected);
-                    
-                    % Plot each channel stacked vertically
-                    connected_idx = 0;
-                    for ch_idx = 1:nChannels
-                        % Check if this channel is disconnected
-                        is_disconnected = ~isempty(Disconnected_Channels) && ismember(ch_idx, Disconnected_Channels);
-                        
-                        if is_disconnected
-                            % Skip disconnected channels in the stacking calculation
-                            % But still plot them at their original position for reference
-                            % Calculate vertical offset based on original position
-                            y_offset_value = (nChannels - ch_idx) * y_offset;
-                            stacked_data = data_matrix(ch_idx, :) + y_offset_value;
-                            
-                            % Plot disconnected channels in red with alpha (lighter/thinner)
-                            try
-                                plot(time_vec, stacked_data, 'LineWidth', Line_Width * 0.5, ...
-                                    'Color', [1, 0, 0, 0.4]);
-                            catch
-                                plot(time_vec, stacked_data, 'LineWidth', Line_Width * 0.5, ...
-                                    'Color', [1, 0.5, 0.5]);
-                            end
-                        else
-                            % Plot connected channels with proper stacking
-                            connected_idx = connected_idx + 1;
-                            % Calculate vertical offset based on connected channel position
-                            y_offset_value = (nConnected - connected_idx) * y_offset;
-                            stacked_data = data_matrix(ch_idx, :) + y_offset_value;
-                            
-                            % Store position for y-axis ticks
-                            connected_y_positions(connected_idx) = y_offset_value;
-                            connected_channel_numbers(connected_idx) = ch_idx;
-                            
-                            % Plot normal channels in default color
-                            plot(time_vec, stacked_data, 'LineWidth', Line_Width);
-                        end
-                    end
-                    
-                    hold off;
-                    
-                    % Set labels and title
-                    xlabel('Time', 'FontSize', 12);
-                    ylabel('Channel (stacked)', 'FontSize', 12);
-                    title(sprintf('%s - %s - %s - Trial %d (Stacked, %d connected channels)', ...
-                        SessionName, this_probe_area, this_signal_type, trial_num, nConnected), ...
-                        'FontSize', 10, 'Interpreter', 'none');
-                    
-                    % Set Y-axis ticks to show only connected channel numbers
-                    % Sort by y position (increasing)
-                    [sorted_y_positions, sort_idx] = sort(connected_y_positions);
-                    sorted_channel_numbers = connected_channel_numbers(sort_idx);
-                    
-                    % Set ticks and labels
-                    set(gca, 'YTick', sorted_y_positions, ...
-                        'YTickLabel', arrayfun(@(x) sprintf('Ch %d', x), sorted_channel_numbers, 'UniformOutput', false));
-                    
-                    % Set ylim to fit only connected channels (with small padding)
-                    if nConnected > 0
-                        ylim([min(sorted_y_positions) - y_offset * 0.1, max(sorted_y_positions) + y_offset * 0.1]);
-                    end
-                    
-                    % Set X-axis to use full width
                     % Ensure time_vec is sorted and increasing
                     if any(diff(time_vec) < 0)
                         warning('Time vector is not monotonically increasing. Sorting...');
@@ -267,10 +179,56 @@ for sidx = 1:length(cfg)
                             data_matrix(ch_idx, :) = data_matrix(ch_idx, sort_idx);
                         end
                     end
-                    xlim([min(time_vec), max(time_vec)]);
                     
-                    grid on;
-                    set(gca, 'FontSize', 8);
+                    % Create figure with vertical subplots (one per channel)
+                    if Show_Figures
+                        fig = figure('Position', [100, 100, Figure_Width, Figure_Height]);
+                    else
+                        fig = figure('Position', [100, 100, Figure_Width, Figure_Height], 'Visible', 'off');
+                    end
+                    
+                    % Set overall title
+                    sgtitle(sprintf('%s - %s - %s - Trial %d (%d channels)', ...
+                        SessionName, this_probe_area, this_signal_type, trial_num, nChannels), ...
+                        'FontSize', 10, 'Interpreter', 'none');
+                    
+                    % Create vertical subplots (nChannels rows, 1 column)
+                    for ch_idx = 1:nChannels
+                        subplot(nChannels, 1, ch_idx);
+                        
+                        % Check if this channel is disconnected
+                        is_disconnected = ~isempty(Disconnected_Channels) && ismember(ch_idx, Disconnected_Channels);
+                        
+                        if is_disconnected
+                            % Plot disconnected channels in red with alpha
+                            try
+                                plot(time_vec, data_matrix(ch_idx, :), 'LineWidth', Line_Width, ...
+                                    'Color', [1, 0, 0, 0.6]);
+                            catch
+                                plot(time_vec, data_matrix(ch_idx, :), 'LineWidth', Line_Width, ...
+                                    'Color', [1, 0, 0]);
+                            end
+                            title(sprintf('Ch %d', ch_idx), 'FontSize', 8, 'Color', [0.8, 0, 0]);
+                        else
+                            % Plot normal channels in default color
+                            plot(time_vec, data_matrix(ch_idx, :), 'LineWidth', Line_Width);
+                            title(sprintf('Ch %d', ch_idx), 'FontSize', 8);
+                        end
+                        
+                        % Set axis properties
+                        axis tight;
+                        set(gca, 'FontSize', 6);
+                        
+                        % Only show xlabel on bottom subplot
+                        if ch_idx == nChannels
+                            xlabel('Time', 'FontSize', 8);
+                        else
+                            set(gca, 'XTickLabel', []);
+                        end
+                        
+                        % Y-axis is independent for each subplot (not shared)
+                        ylabel(sprintf('Ch %d', ch_idx), 'FontSize', 6);
+                    end
                     
                     % Save figure as PNG
                     output_file_name = sprintf('%s_Stacked_Trial_%d.png', this_signal_type, trial_num);
