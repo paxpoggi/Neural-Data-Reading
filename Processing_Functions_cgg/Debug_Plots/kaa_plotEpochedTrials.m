@@ -64,6 +64,10 @@ for sidx = 1:length(cfg)
         
         fprintf('  Processing Signal Type: %s\n', this_signal_type);
         
+        % Load disconnected channel info for each probe area
+        % We'll store method-specific channel lists per probe area
+        ProbeArea_MethodInfo = struct();
+        
         % Try to read Probe_Order from Parameters_Processing.yaml
         yaml_file = fullfile(processing_path, 'Parameters_Processing.yaml');
         Probe_Order = {'ACC_001', 'ACC_002', 'PFC_001', 'PFC_002', 'CD_001', 'CD_002'}; % Default
@@ -87,6 +91,56 @@ for sidx = 1:length(cfg)
         end
         
         nProbes = length(Probe_Order);
+        
+        % Load Debugging_Info for each probe area
+        % Probe areas are in the Activity folder structure
+        activity_base_path = fullfile(outdatadir, ExperimentName, SessionName, 'Activity');
+        for pidx = 1:length(Probe_Order)
+            probe_area_name = Probe_Order{pidx};
+            clustering_file_path = fullfile(activity_base_path, probe_area_name, 'Connected', 'Clustering_Results.mat');
+            
+            ProbeArea_MethodInfo.(probe_area_name).Method_i_Channels = [];
+            ProbeArea_MethodInfo.(probe_area_name).Method_ii_Channels = [];
+            ProbeArea_MethodInfo.(probe_area_name).Method_iii_Channels = [];
+            ProbeArea_MethodInfo.(probe_area_name).Disconnected_Channels = [];
+            
+            if exist(clustering_file_path, 'file')
+                try
+                    clustering_data = load(clustering_file_path);
+                    if isfield(clustering_data, 'Disconnected_Channels')
+                        ProbeArea_MethodInfo.(probe_area_name).Disconnected_Channels = clustering_data.Disconnected_Channels(:);
+                    end
+                    
+                    if isfield(clustering_data, 'Debugging_Info')
+                        Debugging_Info = clustering_data.Debugging_Info;
+                        
+                        if isfield(Debugging_Info, 'Method_i_WidebandThreshold') && ...
+                                isfield(Debugging_Info.Method_i_WidebandThreshold, 'Channels')
+                            ProbeArea_MethodInfo.(probe_area_name).Method_i_Channels = ...
+                                Debugging_Info.Method_i_WidebandThreshold.Channels(:);
+                        end
+                        
+                        if isfield(Debugging_Info, 'Method_iii_ZScore') && ...
+                                isfield(Debugging_Info.Method_iii_ZScore, 'Channels')
+                            ProbeArea_MethodInfo.(probe_area_name).Method_iii_Channels = ...
+                                Debugging_Info.Method_iii_ZScore.Channels(:);
+                        end
+                        
+                        % Method ii channels = Disconnected_Channels minus Method_iii
+                        if ~isempty(ProbeArea_MethodInfo.(probe_area_name).Method_iii_Channels)
+                            ProbeArea_MethodInfo.(probe_area_name).Method_ii_Channels = ...
+                                setdiff(ProbeArea_MethodInfo.(probe_area_name).Disconnected_Channels, ...
+                                ProbeArea_MethodInfo.(probe_area_name).Method_iii_Channels);
+                        else
+                            ProbeArea_MethodInfo.(probe_area_name).Method_ii_Channels = ...
+                                ProbeArea_MethodInfo.(probe_area_name).Disconnected_Channels;
+                        end
+                    end
+                catch ME
+                    fprintf('    [WARN] Failed to load clustering data for %s: %s\n', probe_area_name, ME.message);
+                end
+            end
+        end
         
         % Create output folder (replace Data_Neural with debug_plots)
         output_base = strrep(outdatadir, 'Data_Neural', 'debug_plots');
@@ -189,6 +243,23 @@ for sidx = 1:length(cfg)
                         continue;
                     end
                     
+                    % Get probe area name and method info
+                    probe_area_name = '';
+                    Method_i_Channels = [];
+                    Method_ii_Channels = [];
+                    Method_iii_Channels = [];
+                    Disconnected_Channels = [];
+                    
+                    if pidx <= length(Probe_Order)
+                        probe_area_name = Probe_Order{pidx};
+                        if isfield(ProbeArea_MethodInfo, probe_area_name)
+                            Method_i_Channels = ProbeArea_MethodInfo.(probe_area_name).Method_i_Channels;
+                            Method_ii_Channels = ProbeArea_MethodInfo.(probe_area_name).Method_ii_Channels;
+                            Method_iii_Channels = ProbeArea_MethodInfo.(probe_area_name).Method_iii_Channels;
+                            Disconnected_Channels = ProbeArea_MethodInfo.(probe_area_name).Disconnected_Channels;
+                        end
+                    end
+                    
                     % Plot heatmap
                     imagesc(probe_data);
                     colormap(gca, Colormap_Name);
@@ -198,11 +269,98 @@ for sidx = 1:length(cfg)
                     xlabel('Time (samples)', 'FontSize', 8);
                     ylabel('Channel', 'FontSize', 8);
                     
-                    % Title with probe name
+                    % Build title with probe name and method indicators for disconnected channels
                     if pidx <= length(Probe_Order)
-                        title(Probe_Order{pidx}, 'FontSize', 10);
+                        title_str = Probe_Order{pidx};
+                        
+                        % Add method indicators if there are disconnected channels
+                        if ~isempty(Disconnected_Channels) && ~isempty(Disconnected_Channels(Disconnected_Channels <= nChannels))
+                            % Count how many disconnected channels are in this probe's range
+                            disconnected_in_range = sum(Disconnected_Channels <= nChannels);
+                            if disconnected_in_range > 0
+                                % Build compact summary: show first few with method tags
+                                method_summary_parts = {};
+                                shown_count = 0;
+                                max_show = 3; % Show up to 3 channels in title
+                                
+                                for ch_idx = 1:min(nChannels, max(Disconnected_Channels))
+                                    if ismember(ch_idx, Disconnected_Channels)
+                                        method_tags = {};
+                                        if ismember(ch_idx, Method_i_Channels)
+                                            method_tags{end+1} = 'i';
+                                        end
+                                        if ismember(ch_idx, Method_ii_Channels)
+                                            method_tags{end+1} = 'ii';
+                                        end
+                                        if ismember(ch_idx, Method_iii_Channels)
+                                            method_tags{end+1} = 'iii';
+                                        end
+                                        
+                                        if ~isempty(method_tags)
+                                            method_summary_parts{end+1} = sprintf('%d[%s]', ch_idx, strjoin(method_tags, ','));
+                                            shown_count = shown_count + 1;
+                                            if shown_count >= max_show
+                                                break;
+                                            end
+                                        end
+                                    end
+                                end
+                                
+                                if ~isempty(method_summary_parts)
+                                    if disconnected_in_range > max_show
+                                        title_str = sprintf('%s (%s +%d)', title_str, strjoin(method_summary_parts, ','), disconnected_in_range - max_show);
+                                    else
+                                        title_str = sprintf('%s (%s)', title_str, strjoin(method_summary_parts, ','));
+                                    end
+                                end
+                            end
+                        end
+                        
+                        title(title_str, 'FontSize', 10);
                     else
                         title(sprintf('Probe %d', pidx), 'FontSize', 10);
+                    end
+                    
+                    % Modify y-axis tick labels to show method indicators for disconnected channels
+                    if ~isempty(Disconnected_Channels)
+                        ytick_labels = get(gca, 'YTickLabel');
+                        if ischar(ytick_labels)
+                            ytick_labels = cellstr(ytick_labels);
+                        end
+                        ytick_positions = get(gca, 'YTick');
+                        
+                        % Update labels for disconnected channels
+                        for ch_idx = 1:nChannels
+                            if ismember(ch_idx, Disconnected_Channels)
+                                % Find which tick corresponds to this channel
+                                % Y-axis is inverted for imagesc, so we need to account for that
+                                % Channel 1 is at the top (y = nChannels), channel nChannels is at bottom (y = 1)
+                                y_pos = nChannels - ch_idx + 1;
+                                
+                                % Find closest tick position
+                                [~, tick_idx] = min(abs(ytick_positions - y_pos));
+                                
+                                if tick_idx <= length(ytick_labels)
+                                    % Build method tags
+                                    method_tags = {};
+                                    if ismember(ch_idx, Method_i_Channels)
+                                        method_tags{end+1} = 'i';
+                                    end
+                                    if ismember(ch_idx, Method_ii_Channels)
+                                        method_tags{end+1} = 'ii';
+                                    end
+                                    if ismember(ch_idx, Method_iii_Channels)
+                                        method_tags{end+1} = 'iii';
+                                    end
+                                    
+                                    if ~isempty(method_tags)
+                                        ytick_labels{tick_idx} = sprintf('%s [%s]', ytick_labels{tick_idx}, strjoin(method_tags, ','));
+                                    end
+                                end
+                            end
+                        end
+                        
+                        set(gca, 'YTickLabel', ytick_labels);
                     end
                     
                     % Adjust axis

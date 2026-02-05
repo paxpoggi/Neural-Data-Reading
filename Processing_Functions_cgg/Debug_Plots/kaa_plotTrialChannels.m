@@ -66,9 +66,13 @@ for sidx = 1:length(cfg)
         
         fprintf('  Processing Probe Area: %s\n', this_probe_area);
         
-        % Load disconnected channels for this probe area
+        % Load disconnected channels and Debugging_Info for this probe area
         clustering_file_path = fullfile(probe_area_path, 'Connected', 'Clustering_Results.mat');
         Disconnected_Channels = [];
+        Method_i_Channels = [];
+        Method_ii_Channels = [];
+        Method_iii_Channels = [];
+        
         if exist(clustering_file_path, 'file')
             try
                 clustering_data = load(clustering_file_path);
@@ -78,6 +82,39 @@ for sidx = 1:length(cfg)
                         numel(Disconnected_Channels), num2str(Disconnected_Channels'));
                 else
                     fprintf('    [INFO] Clustering_Results.mat found but Disconnected_Channels field missing.\n');
+                end
+                
+                % Load Debugging_Info to get method-specific channel lists
+                if isfield(clustering_data, 'Debugging_Info')
+                    Debugging_Info = clustering_data.Debugging_Info;
+                    
+                    % Extract channels from each method
+                    if isfield(Debugging_Info, 'Method_i_WidebandThreshold') && ...
+                            isfield(Debugging_Info.Method_i_WidebandThreshold, 'Channels')
+                        Method_i_Channels = Debugging_Info.Method_i_WidebandThreshold.Channels(:);
+                    end
+                    
+                    % Extract Method iii channels
+                    if isfield(Debugging_Info, 'Method_iii_ZScore') && ...
+                            isfield(Debugging_Info.Method_iii_ZScore, 'Channels')
+                        Method_iii_Channels = Debugging_Info.Method_iii_ZScore.Channels(:);
+                    end
+                    
+                    % Method ii channels: channels detected by clustering
+                    % Since Method_iii adds channels to Disconnected_Channels (removes from Connected),
+                    % Method_ii channels = Disconnected_Channels minus Method_iii channels
+                    % (Method_ii includes Method_i channels as seeds, but we'll track them separately)
+                    if exist('Method_iii_Channels', 'var') && ~isempty(Method_iii_Channels)
+                        Method_ii_Channels = setdiff(Disconnected_Channels, Method_iii_Channels);
+                    else
+                        % No Method_iii, so all Disconnected_Channels are from Methods i & ii
+                        Method_ii_Channels = Disconnected_Channels;
+                    end
+                    
+                    fprintf('    Method detection counts - i: %d, ii: %d, iii: %d\n', ...
+                        numel(Method_i_Channels), numel(Method_ii_Channels), numel(Method_iii_Channels));
+                else
+                    fprintf('    [INFO] Debugging_Info not found in Clustering_Results.mat\n');
                 end
             catch ME
                 warning('Failed to load disconnected channels from %s: %s', clustering_file_path, ME.message);
@@ -208,6 +245,25 @@ for sidx = 1:length(cfg)
                         % Check if this channel is disconnected
                         is_disconnected = ~isempty(Disconnected_Channels) && ismember(ch_idx, Disconnected_Channels);
                         
+                        % Determine which methods detected this channel
+                        method_tags = {};
+                        if ismember(ch_idx, Method_i_Channels)
+                            method_tags{end+1} = 'i';
+                        end
+                        if ismember(ch_idx, Method_ii_Channels)
+                            method_tags{end+1} = 'ii';
+                        end
+                        if ismember(ch_idx, Method_iii_Channels)
+                            method_tags{end+1} = 'iii';
+                        end
+                        
+                        % Build title with method indicators
+                        if is_disconnected && ~isempty(method_tags)
+                            title_str = sprintf('Ch %d [%s]', ch_idx, strjoin(method_tags, ','));
+                        else
+                            title_str = sprintf('Ch %d', ch_idx);
+                        end
+                        
                         if is_disconnected
                             % Plot disconnected channels in red with alpha=0.6
                             % Use Color property with RGBA for transparency (MATLAB R2020b+)
@@ -220,11 +276,11 @@ for sidx = 1:length(cfg)
                                 plot(time_vec, data_matrix(ch_idx, :), 'LineWidth', Line_Width, ...
                                     'Color', [1, 0, 0]); % Solid red
                             end
-                            title(sprintf('Ch %d', ch_idx), 'FontSize', Font_Size, 'Color', [0.8, 0, 0]);
+                            title(title_str, 'FontSize', Font_Size, 'Color', [0.8, 0, 0]);
                         else
                             % Plot normal channels in default color
                             plot(time_vec, data_matrix(ch_idx, :), 'LineWidth', Line_Width);
-                            title(sprintf('Ch %d', ch_idx), 'FontSize', Font_Size);
+                            title(title_str, 'FontSize', Font_Size);
                         end
                         
                         set(gca, 'FontSize', Font_Size);
