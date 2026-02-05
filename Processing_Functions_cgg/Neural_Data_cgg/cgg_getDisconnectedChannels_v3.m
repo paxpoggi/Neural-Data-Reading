@@ -127,11 +127,27 @@ end
 
 fprintf('.. Combined seed channels (parameters + threshold): [%s]\n', ...
     num2str(Disconnected_Channels_GT));
+
+% Store Method i (Wideband Threshold) results in Debugging_Info
+Debugging_Info_Method_i = struct();
+Debugging_Info_Method_i.Channels = threshold_channels;
+if ~isempty(threshold_channels)
+    Debugging_Info_Method_i.MaxAbsoluteValues = max_abs_per_channel(threshold_channels);
+else
+    Debugging_Info_Method_i.MaxAbsoluteValues = [];
+end
+Debugging_Info_Method_i.Threshold = Wideband_Threshold;
+Debugging_Info_Method_i.OriginalSeeds = Disconnected_Channels_GT_Original;
+Debugging_Info_Method_i.CombinedSeeds = Disconnected_Channels_GT;
+
 %%
 [Connected_Channels,Disconnected_Channels,Debugging_Info] = ...
     cgg_getDisconnectedChannelsIteration_v2(InData,NumReplicates,...
     InDistance,Start_Group,End_Group,Disconnected_Channels_GT,...
     Disconnected_Threshold,NumIterations);
+
+% Add Method i results to Debugging_Info
+Debugging_Info.Method_i_WidebandThreshold = Debugging_Info_Method_i;
 
 end
 
