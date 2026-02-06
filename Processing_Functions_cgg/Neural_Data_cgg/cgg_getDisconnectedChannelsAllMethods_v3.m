@@ -21,7 +21,10 @@ function [Connected_Channels, Disconnected_Channels, is_previously_rereferenced,
 %           'outdatadir_WideBand'  - Path to wideband trial files directory
 %       Optional name-value pairs:
 %           'SessionName'      - Session name for session-specific bad channel seeds
-%           'use_zscore'       - Whether to apply Z-score screening (default: true)
+%           'compute_zscore'   - Whether to compute Z-score screening (default: true)
+%           'use_zscore'       - Whether to apply Z-score results to channel lists (default: true)
+%                                 If compute_zscore=false, use_zscore is ignored
+%                                 If compute_zscore=true and use_zscore=false, computes but doesn't apply
 %           'zscore_threshold' - Z-score threshold (default: 7)
 %           'fraction_threshold' - Fraction threshold (default: 0.01)
 %           'nSampleTrials'    - Number of trials to sample for Z-score (default: 10)
@@ -43,17 +46,24 @@ outdatadir_WideBand = CheckVararginPairs('outdatadir_WideBand', '', varargin{:})
 SessionName = CheckVararginPairs('SessionName', '', varargin{:});
 
 % Parse optional parameters
+compute_zscore = CheckVararginPairs('compute_zscore', true, varargin{:});
 use_zscore = CheckVararginPairs('use_zscore', true, varargin{:});
 zscore_threshold = CheckVararginPairs('zscore_threshold', 7, varargin{:});
 fraction_threshold = CheckVararginPairs('fraction_threshold', 0.01, varargin{:});
 nSampleTrials = CheckVararginPairs('nSampleTrials', 10, varargin{:});
+
+% If compute_zscore is false, use_zscore is ignored
+if ~compute_zscore
+    use_zscore = false;
+end
 
 % Log parameters
 fprintf('.. Parameters:\n');
 fprintf('   Probe Area: %s\n', probe_area);
 fprintf('   Activity Type: %s\n', Activity_Type);
 fprintf('   Trials to sample: %d\n', Count_Sel_Trial);
-fprintf('   Use Z-score (Method iii): %s\n', mat2str(use_zscore));
+fprintf('   Compute Z-score (Method iii): %s\n', mat2str(compute_zscore));
+fprintf('   Apply Z-score results: %s\n', mat2str(use_zscore));
 
 % Step 1: Call Methods i & ii (Wideband Threshold + Clustering)
 fprintf('\n.. Applying Methods i & ii: Wideband Threshold + Clustering...\n');
@@ -63,38 +73,59 @@ fprintf('\n.. Applying Methods i & ii: Wideband Threshold + Clustering...\n');
 fprintf('.. Methods i & ii complete. Connected: %d, Disconnected: %d\n', ...
     numel(Connected_Channels), numel(Disconnected_Channels));
 
-% Step 2: Apply Method iii (Z-score screening) if enabled
-if use_zscore
-    fprintf('\n.. Applying Method iii: Z-score screening...\n');
+% Step 2: Compute and optionally apply Method iii (Z-score screening)
+if compute_zscore
+    fprintf('\n.. Computing Method iii: Z-score screening...\n');
     
-    % Call Z-score method
+    % Call Z-score method (always computes and saves to Debugging_Info)
     [badZIdx, Debugging_Info, refLabelsGood] = cgg_getDisconnectedChannelsZScore_v3(...
         Connected_Channels, outdatadir_WideBand, clustering_file_name, Debugging_Info, ...
         'zscore_threshold', zscore_threshold, ...
         'fraction_threshold', fraction_threshold, ...
         'nSampleTrials', nSampleTrials);
     
-    % Update Connected/Disconnected lists
-    Disconnected_Channels = unique([Disconnected_Channels(:); badZIdx(:)]);
-    Connected_Channels = setdiff(Connected_Channels(:), badZIdx(:), 'stable');
+    fprintf('.. Method iii computed. Detected %d bad channel(s): [%s]\n', ...
+        numel(badZIdx), num2str(badZIdx));
     
-    fprintf('.. Method iii complete. Updated Connected: %d, Disconnected: %d\n', ...
-        numel(Connected_Channels), numel(Disconnected_Channels));
-    fprintf('.. Z-score removed %d additional channel(s)\n', numel(badZIdx));
-    
-    % Recompute "good" ref set but restricted to current Connected (safety)
-    % Load labels from first wideband trial file
-    wbFiles = dir(fullfile(outdatadir_WideBand, 'WideBand_Trial_*.mat'));
-    if ~isempty(wbFiles)
-        S0 = load(fullfile(outdatadir_WideBand, wbFiles(1).name), 'this_recdata_wideband');
-        labels = S0.this_recdata_wideband.label;
-        procLabels = labels(Connected_Channels);
-        goodRef = intersect(refLabelsGood, procLabels, 'stable');
+    % Apply results to channel lists only if use_zscore is true
+    if use_zscore
+        fprintf('.. Applying Z-score results to channel lists...\n');
+        
+        % Update Connected/Disconnected lists
+        Disconnected_Channels = unique([Disconnected_Channels(:); badZIdx(:)]);
+        Connected_Channels = setdiff(Connected_Channels(:), badZIdx(:), 'stable');
+        
+        fprintf('.. Method iii applied. Updated Connected: %d, Disconnected: %d\n', ...
+            numel(Connected_Channels), numel(Disconnected_Channels));
+        fprintf('.. Z-score removed %d additional channel(s)\n', numel(badZIdx));
+        
+        % Recompute "good" ref set but restricted to current Connected (safety)
+        % Load labels from first wideband trial file
+        wbFiles = dir(fullfile(outdatadir_WideBand, 'WideBand_Trial_*.mat'));
+        if ~isempty(wbFiles)
+            S0 = load(fullfile(outdatadir_WideBand, wbFiles(1).name), 'this_recdata_wideband');
+            labels = S0.this_recdata_wideband.label;
+            procLabels = labels(Connected_Channels);
+            goodRef = intersect(refLabelsGood, procLabels, 'stable');
+        else
+            goodRef = Connected_Channels;  % Fallback
+        end
     else
-        goodRef = Connected_Channels;  % Fallback
+        fprintf('.. Z-score results computed but NOT applied to channel lists (use_zscore=false)\n');
+        fprintf('.. Results saved in Debugging_Info.Method_iii_ZScore\n');
+        
+        % Load labels for goodRef (without Z-score filtering, since we didn't apply it)
+        wbFiles = dir(fullfile(outdatadir_WideBand, 'WideBand_Trial_*.mat'));
+        if ~isempty(wbFiles)
+            S0 = load(fullfile(outdatadir_WideBand, wbFiles(1).name), 'this_recdata_wideband');
+            labels = S0.this_recdata_wideband.label;
+            goodRef = labels(Connected_Channels);
+        else
+            goodRef = Connected_Channels;  % Fallback
+        end
     end
 else
-    fprintf('\n.. Method iii (Z-score) skipped (use_zscore=false)\n');
+    fprintf('\n.. Method iii (Z-score) skipped (compute_zscore=false)\n');
     
     % Load labels for goodRef (without Z-score filtering)
     wbFiles = dir(fullfile(outdatadir_WideBand, 'WideBand_Trial_*.mat'));
