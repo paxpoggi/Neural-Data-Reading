@@ -20,6 +20,28 @@ function [Connected_Channels,Disconnected_Channels,Debugging_Info] = ...
 All_Channels=1:NumChannels;
 
 %%
+% Identify good channels (exclude Method I bad channels from PCA computation)
+% Handle edge cases: no bad channels, all channels bad, insufficient good channels
+Good_Channels = setdiff(All_Channels, Disconnected_Channels_GT);
+use_all_channels_for_pca = false;
+
+if isempty(Disconnected_Channels_GT)
+    % No bad channels: use all channels (current behavior)
+    Good_Channels = All_Channels;
+    use_all_channels_for_pca = true;
+    fprintf('.. Method ii: No Method I bad channels - using all %d channels for PCA\n', NumChannels);
+elseif isempty(Good_Channels) || numel(Good_Channels) < 2
+    % All channels bad or insufficient good channels: use all channels with warning
+    Good_Channels = All_Channels;
+    use_all_channels_for_pca = true;
+    warning('Method ii: Too few good channels (%d) - using all channels for PCA', numel(Good_Channels));
+else
+    % Normal case: exclude bad channels from PCA
+    fprintf('.. Method ii: Excluding %d Method I bad channel(s) from PCA computation: [%s]\n', ...
+        numel(Disconnected_Channels_GT), num2str(Disconnected_Channels_GT));
+    fprintf('.. Method ii: Computing PCA on %d good channel(s)...\n', numel(Good_Channels));
+end
+
 fprintf('.. Method ii: Starting clustering analysis...\n');
 fprintf('.. Method ii: Parameters - Components: %d, Clusters: %d-%d, Iterations: %d\n', ...
     NumIterations, Start_Group, End_Group, NumIterations);
@@ -28,10 +50,68 @@ NumGroups_Iter=length(Start_Group:End_Group);
 Disconnected_Count=cell(1,NumIterations);
 
 % Compute PCA and save all outputs (including loadings)
-fprintf('.. Method ii: Computing PCA for LFP and Wideband data...\n');
-[COEFF_LFP,PCA_SCORE_LFP,LATENT_LFP,EXPLAINED_LFP] = fastpca(InData{1});
-[COEFF_WB,PCA_SCORE_WB,LATENT_WB,EXPLAINED_WB] = fastpca(InData{2});
-fprintf('.. Method ii: PCA complete. Starting clustering iterations...\n');
+% Critical: Centering and scaling must be identical for projection
+if use_all_channels_for_pca
+    % Use all channels (edge case: no bad channels or insufficient good channels)
+    fprintf('.. Method ii: Computing PCA for LFP and Wideband data (all channels)...\n');
+    [COEFF_LFP,PCA_SCORE_LFP,LATENT_LFP,EXPLAINED_LFP] = fastpca(InData{1});
+    [COEFF_WB,PCA_SCORE_WB,LATENT_WB,EXPLAINED_WB] = fastpca(InData{2});
+    
+    % Mean is computed internally by fastpca (from all channels)
+    mean_LFP = mean(InData{1}, 1);  % [1 x TotalSamples] - mean per time point across all channels
+    mean_WB = mean(InData{2}, 1);   % [1 x TotalSamples] - mean per time point across all channels
+else
+    % Normal case: exclude bad channels from PCA, then project them
+    fprintf('.. Method ii: Computing mean from %d good channel(s) for centering...\n', numel(Good_Channels));
+    
+    % Extract good channel data
+    InData_Good_LFP = InData{1}(Good_Channels, :);  % [N_good x TotalSamples]
+    InData_Good_WB = InData{2}(Good_Channels, :);   % [N_good x TotalSamples]
+    
+    % Compute mean from good channels BEFORE PCA (critical for consistent projection)
+    mean_LFP = mean(InData_Good_LFP, 1);  % [1 x TotalSamples] - mean per time point across good channels
+    mean_WB = mean(InData_Good_WB, 1);    % [1 x TotalSamples] - mean per time point across good channels
+    
+    fprintf('.. Method ii: Computing PCA on %d good channel(s) (centered)...\n', numel(Good_Channels));
+    
+    % Compute PCA on good channels (fastpca will center internally using mean of good channels)
+    [COEFF_LFP, SCORE_Good_LFP, LATENT_LFP, EXPLAINED_LFP] = fastpca(InData_Good_LFP);
+    [COEFF_WB, SCORE_Good_WB, LATENT_WB, EXPLAINED_WB] = fastpca(InData_Good_WB);
+    
+    % Extract bad channel data
+    InData_Bad_LFP = InData{1}(Disconnected_Channels_GT, :);  % [N_bad x TotalSamples]
+    InData_Bad_WB = InData{2}(Disconnected_Channels_GT, :);   % [N_bad x TotalSamples]
+    
+    fprintf('.. Method ii: Projecting %d bad channel(s) onto PCA space using same mean...\n', numel(Disconnected_Channels_GT));
+    
+    % Project bad channels using IDENTICAL preprocessing (same mean from good channels)
+    % Center bad channels using same mean: (bad_data - mean) * COEFF
+    InData_Bad_LFP_Centered = InData_Bad_LFP - mean_LFP;  % Broadcasting: [N_bad x TotalSamples] - [1 x TotalSamples]
+    InData_Bad_WB_Centered = InData_Bad_WB - mean_WB;     % Broadcasting: [N_bad x TotalSamples] - [1 x TotalSamples]
+    
+    SCORE_Bad_LFP = InData_Bad_LFP_Centered * COEFF_LFP;  % [N_bad x NumComponents]
+    SCORE_Bad_WB = InData_Bad_WB_Centered * COEFF_WB;     % [N_bad x NumComponents]
+    
+    % Combine scores maintaining original channel order
+    % Create full score matrices [NumChannels x NumComponents]
+    NumComponents_Computed = size(COEFF_LFP, 2);  % Number of components computed by PCA
+    
+    PCA_SCORE_LFP = zeros(NumChannels, NumComponents_Computed);
+    PCA_SCORE_WB = zeros(NumChannels, NumComponents_Computed);
+    
+    % Fill good channel positions (maintain order via Good_Channels indices)
+    PCA_SCORE_LFP(Good_Channels, :) = SCORE_Good_LFP;
+    PCA_SCORE_WB(Good_Channels, :) = SCORE_Good_WB;
+    
+    % Fill bad channel positions (maintain order via Disconnected_Channels_GT indices)
+    PCA_SCORE_LFP(Disconnected_Channels_GT, :) = SCORE_Bad_LFP;
+    PCA_SCORE_WB(Disconnected_Channels_GT, :) = SCORE_Bad_WB;
+    
+    fprintf('.. Method ii: PCA complete. Scores computed for all %d channels (good: %d, projected: %d).\n', ...
+        NumChannels, numel(Good_Channels), numel(Disconnected_Channels_GT));
+end
+
+fprintf('.. Method ii: Starting clustering iterations...\n');
 
 % Initialize structures to store detailed clustering results
 Clustering_Results_LFP = struct();
@@ -178,6 +258,35 @@ Debugging_Info.PCA_Results.WB.COEFF = COEFF_WB;
 Debugging_Info.PCA_Results.WB.SCORE = PCA_SCORE_WB;
 Debugging_Info.PCA_Results.WB.LATENT = LATENT_WB;
 Debugging_Info.PCA_Results.WB.EXPLAINED = EXPLAINED_WB;
+
+% Store PCA exclusion and projection information
+if use_all_channels_for_pca
+    % Edge case: all channels used for PCA
+    Debugging_Info.PCA_Results.LFP.Channels_Excluded_From_PCA = [];
+    Debugging_Info.PCA_Results.LFP.Channels_Included_In_PCA = All_Channels;
+    Debugging_Info.PCA_Results.LFP.Mean_Computed_From_Good_Channels = mean_LFP;  % Mean from all channels
+    Debugging_Info.PCA_Results.LFP.Bad_Channels_Projected = false;
+    Debugging_Info.PCA_Results.LFP.Preprocessing_Note = 'All channels used for PCA (no exclusion)';
+    
+    Debugging_Info.PCA_Results.WB.Channels_Excluded_From_PCA = [];
+    Debugging_Info.PCA_Results.WB.Channels_Included_In_PCA = All_Channels;
+    Debugging_Info.PCA_Results.WB.Mean_Computed_From_Good_Channels = mean_WB;  % Mean from all channels
+    Debugging_Info.PCA_Results.WB.Bad_Channels_Projected = false;
+    Debugging_Info.PCA_Results.WB.Preprocessing_Note = 'All channels used for PCA (no exclusion)';
+else
+    % Normal case: bad channels excluded from PCA, then projected
+    Debugging_Info.PCA_Results.LFP.Channels_Excluded_From_PCA = Disconnected_Channels_GT;
+    Debugging_Info.PCA_Results.LFP.Channels_Included_In_PCA = Good_Channels;
+    Debugging_Info.PCA_Results.LFP.Mean_Computed_From_Good_Channels = mean_LFP;  % Mean from good channels only
+    Debugging_Info.PCA_Results.LFP.Bad_Channels_Projected = true;
+    Debugging_Info.PCA_Results.LFP.Preprocessing_Note = 'Mean computed from good channels only, applied identically to all channels';
+    
+    Debugging_Info.PCA_Results.WB.Channels_Excluded_From_PCA = Disconnected_Channels_GT;
+    Debugging_Info.PCA_Results.WB.Channels_Included_In_PCA = Good_Channels;
+    Debugging_Info.PCA_Results.WB.Mean_Computed_From_Good_Channels = mean_WB;  % Mean from good channels only
+    Debugging_Info.PCA_Results.WB.Bad_Channels_Projected = true;
+    Debugging_Info.PCA_Results.WB.Preprocessing_Note = 'Mean computed from good channels only, applied identically to all channels';
+end
 
 % Store Method ii (Clustering) results
 % ChannelStatus matrices: [NumChannels x NumComponents x NumGroups]
