@@ -134,6 +134,7 @@ InDistance='sqeuclidean';
 NumIterations=20;
 Disconnected_Threshold=0.5;
 Wideband_Threshold=3500; % Channels with absolute wideband values exceeding this threshold will be added to seed list
+Wideband_Threshold_Trial_Percentage=0.5; % Percentage of trials (0-1) that must exceed threshold for channel to be marked as disconnected. Default 0.5 = 50%
 
 w = whos;
 for a = 1:length(w)

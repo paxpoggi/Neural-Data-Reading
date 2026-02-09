@@ -96,16 +96,19 @@ NumIterations=cfg_disconnected.NumIterations;
 Disconnected_Channels_GT=cfg_disconnected.Disconnected_Channels_GT;
 Disconnected_Threshold=cfg_disconnected.Disconnected_Threshold;
 Wideband_Threshold=cfg_disconnected.Wideband_Threshold;
+Wideband_Threshold_Trial_Percentage=cfg_disconnected.Wideband_Threshold_Trial_Percentage;
 
 % Store original seed channels before adding threshold-based channels
 Disconnected_Channels_GT_Original = Disconnected_Channels_GT;
 
 % Detect channels with absolute wideband values exceeding threshold
-% Check if threshold is exceeded in ALL sampled trials (not just any)
-fprintf('.. Checking for channels with absolute wideband > %d in ALL %d sampled trial(s)...\n', Wideband_Threshold, length(InData_WB));
+% Check if threshold is exceeded in at least X% of sampled trials
+required_trials = ceil(Wideband_Threshold_Trial_Percentage * length(InData_WB));
+fprintf('.. Checking for channels with absolute wideband > %d in at least %.0f%% (%d/%d) of sampled trial(s)...\n', ...
+    Wideband_Threshold, Wideband_Threshold_Trial_Percentage * 100, required_trials, length(InData_WB));
 
-% For each channel, check if max absolute value exceeds threshold in ALL trials
-channels_exceeding_in_all_trials = true(NumChannels, 1);  % Start with all channels
+% Count how many trials exceed threshold for each channel
+trials_exceeding_per_channel = zeros(NumChannels, 1);
 max_abs_per_channel_per_trial = zeros(NumChannels, length(InData_WB));  % Store max per trial for debugging
 
 for tidx = 1:length(InData_WB)
@@ -113,12 +116,12 @@ for tidx = 1:length(InData_WB)
     max_abs_this_trial = max(abs(InData_WB{tidx}), [], 2);  % [NumChannels x 1]
     max_abs_per_channel_per_trial(:, tidx) = max_abs_this_trial;
     
-    % Channel must exceed threshold in THIS trial to remain in candidate list
-    channels_exceeding_in_all_trials = channels_exceeding_in_all_trials & (max_abs_this_trial > Wideband_Threshold);
+    % Count trials where this channel exceeds threshold
+    trials_exceeding_per_channel = trials_exceeding_per_channel + (max_abs_this_trial > Wideband_Threshold);
 end
 
-% Find channels that exceeded threshold in ALL trials
-threshold_channels = find(channels_exceeding_in_all_trials)';
+% Find channels that exceeded threshold in at least required_trials
+threshold_channels = find(trials_exceeding_per_channel >= required_trials)';
 
 % Concatenate data for PCA/clustering (needed for downstream processing)
 InData_WB=cell2mat(InData_WB);
@@ -126,11 +129,15 @@ InData_LFP=cell2mat(InData_LFP);
 InData={InData_LFP,InData_WB};
 
 if ~isempty(threshold_channels)
-    fprintf('.. Found %d channel(s) exceeding threshold in ALL trials: [%s]\n', ...
-        numel(threshold_channels), num2str(threshold_channels));
+    fprintf('.. Found %d channel(s) exceeding threshold in >= %d/%d trials: [%s]\n', ...
+        numel(threshold_channels), required_trials, length(InData_WB), num2str(threshold_channels));
     
-    % Get max values across all trials for these channels (for reporting)
+    % Get trial counts and max values for these channels (for reporting)
+    trial_counts_for_bad_channels = trials_exceeding_per_channel(threshold_channels);
     max_abs_across_all_trials = max(max_abs_per_channel_per_trial(threshold_channels, :), [], 2);
+    
+    fprintf('.. Trial counts (exceeded threshold): [%s]\n', ...
+        num2str(trial_counts_for_bad_channels));
     fprintf('.. Max absolute values across all trials: [%s]\n', ...
         num2str(max_abs_across_all_trials));
     
@@ -142,7 +149,7 @@ if ~isempty(threshold_channels)
         fprintf('.. Added %d channel(s) from threshold detection to seed list\n', num_added);
     end
 else
-    fprintf('.. No channels exceeded wideband threshold in ALL trials\n');
+    fprintf('.. No channels exceeded wideband threshold in >= %d/%d trials\n', required_trials, length(InData_WB));
 end
 
 fprintf('.. Combined seed channels (parameters + threshold): [%s]\n', ...
@@ -156,12 +163,16 @@ if ~isempty(threshold_channels)
     Debugging_Info_Method_i.MaxAbsoluteValues = max(max_abs_per_channel_per_trial(threshold_channels, :), [], 2);
     % Store max per trial for detailed analysis
     Debugging_Info_Method_i.MaxAbsoluteValuesPerTrial = max_abs_per_channel_per_trial(threshold_channels, :);
+    % Store trial counts (how many trials exceeded threshold) for each bad channel
+    Debugging_Info_Method_i.Trials_Exceeding_Per_Channel = trials_exceeding_per_channel(threshold_channels);
 else
     Debugging_Info_Method_i.MaxAbsoluteValues = [];
     Debugging_Info_Method_i.MaxAbsoluteValuesPerTrial = [];
+    Debugging_Info_Method_i.Trials_Exceeding_Per_Channel = [];
 end
 Debugging_Info_Method_i.Threshold = Wideband_Threshold;
-Debugging_Info_Method_i.RequireAllTrials = true;  % Flag indicating threshold must be exceeded in ALL trials
+Debugging_Info_Method_i.Wideband_Threshold_Trial_Percentage = Wideband_Threshold_Trial_Percentage;
+Debugging_Info_Method_i.Required_Trials_Threshold = required_trials;
 Debugging_Info_Method_i.NumTrialsChecked = length(InData_WB);
 Debugging_Info_Method_i.OriginalSeeds = Disconnected_Channels_GT_Original;
 Debugging_Info_Method_i.CombinedSeeds = Disconnected_Channels_GT;
