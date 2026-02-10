@@ -89,15 +89,17 @@ else
     InData_Bad_LFP_Centered = InData_Bad_LFP - mean_LFP;  % Broadcasting: [N_bad x TotalSamples] - [1 x TotalSamples]
     InData_Bad_WB_Centered = InData_Bad_WB - mean_WB;     % Broadcasting: [N_bad x TotalSamples] - [1 x TotalSamples]
     
-    SCORE_Bad_LFP = InData_Bad_LFP_Centered * COEFF_LFP;  % [N_bad x NumComponents]
-    SCORE_Bad_WB = InData_Bad_WB_Centered * COEFF_WB;     % [N_bad x NumComponents]
+    SCORE_Bad_LFP = InData_Bad_LFP_Centered * COEFF_LFP;  % [N_bad x NumComponents_LFP]
+    SCORE_Bad_WB = InData_Bad_WB_Centered * COEFF_WB;     % [N_bad x NumComponents_WB]
     
     % Combine scores maintaining original channel order
     % Create full score matrices [NumChannels x NumComponents]
-    NumComponents_Computed = size(COEFF_LFP, 2);  % Number of components computed by PCA
+    % Note: LFP and WB may have different numbers of components
+    NumComponents_LFP = size(COEFF_LFP, 2);  % Number of components computed by LFP PCA
+    NumComponents_WB = size(COEFF_WB, 2);    % Number of components computed by WB PCA
     
-    PCA_SCORE_LFP = zeros(NumChannels, NumComponents_Computed);
-    PCA_SCORE_WB = zeros(NumChannels, NumComponents_Computed);
+    PCA_SCORE_LFP = zeros(NumChannels, NumComponents_LFP);
+    PCA_SCORE_WB = zeros(NumChannels, NumComponents_WB);
     
     % Fill good channel positions (maintain order via Good_Channels indices)
     PCA_SCORE_LFP(Good_Channels, :) = SCORE_Good_LFP;
