@@ -9,7 +9,7 @@ function [Connected_Channels,Disconnected_Channels,is_previously_rereferenced,De
 %       Count_Sel_Trial - Number of trials to sample for analysis
 %       inputfolder     - Input data folder path
 %       outdatadir      - Output data folder path
-%       Activity_Type   - Type of activity data (e.g., 'WideBand')
+%       Activity_Type   - Type of activity data (e.g., 'Raw')
 %       probe_area      - Probe area name (e.g., 'ACC_001')
 %       SessionName     - (Optional) Session name for session-specific bad channel seeds
 
@@ -68,7 +68,7 @@ if isempty(Activity_Type)
     prompt = {'Enter Activity Type (e.g. WideBand)'};
     dlgtitle = 'Input for Activity Type';
     dims = [1 35];
-    definput = {'WideBand'};
+    definput = {'Raw'};
     Activity_Type = inputdlg(prompt,dlgtitle,dims,definput);
     Activity_Type = Activity_Type{1};
 end

@@ -18,7 +18,7 @@ function [Connected_Channels, Disconnected_Channels, is_previously_rereferenced,
 %           'Activity_Type'   - Type of activity data (e.g., 'WideBand')
 %           'probe_area'      - Probe area name (e.g., 'ACC_001')
 %           'clustering_file_name' - Path to Clustering_Results.mat file
-%           'outdatadir_WideBand'  - Path to wideband trial files directory
+%           'outdatadir_Raw'  - Path to raw trial files directory
 %       Optional name-value pairs:
 %           'SessionName'      - Session name for session-specific bad channel seeds
 %           'compute_zscore'   - Whether to compute Z-score screening (default: true)
@@ -42,7 +42,7 @@ fprintf('=== Starting Disconnected Channel Detection (All Methods) ===\n');
 probe_area = CheckVararginPairs('probe_area', '', varargin{:});
 Activity_Type = CheckVararginPairs('Activity_Type', '', varargin{:});
 clustering_file_name = CheckVararginPairs('clustering_file_name', '', varargin{:});
-outdatadir_WideBand = CheckVararginPairs('outdatadir_WideBand', '', varargin{:});
+outdatadir_Raw = CheckVararginPairs('outdatadir_Raw', '', varargin{:});
 SessionName = CheckVararginPairs('SessionName', '', varargin{:});
 
 % Parse optional parameters
@@ -79,7 +79,7 @@ if compute_zscore
     
     % Call Z-score method (always computes and saves to Debugging_Info)
     [badZIdx, Debugging_Info, refLabelsGood] = cgg_getDisconnectedChannelsZScore_v3(...
-        Connected_Channels, outdatadir_WideBand, clustering_file_name, Debugging_Info, ...
+        Connected_Channels, outdatadir_Raw, clustering_file_name, Debugging_Info, ...
         'zscore_threshold', zscore_threshold, ...
         'fraction_threshold', fraction_threshold, ...
         'nSampleTrials', nSampleTrials);
@@ -100,11 +100,11 @@ if compute_zscore
         fprintf('.. Z-score removed %d additional channel(s)\n', numel(badZIdx));
         
         % Recompute "good" ref set but restricted to current Connected (safety)
-        % Load labels from first wideband trial file
-        wbFiles = dir(fullfile(outdatadir_WideBand, 'WideBand_Trial_*.mat'));
-        if ~isempty(wbFiles)
-            S0 = load(fullfile(outdatadir_WideBand, wbFiles(1).name), 'this_recdata_wideband');
-            labels = S0.this_recdata_wideband.label;
+        % Load labels from first raw trial file
+        rawFiles = dir(fullfile(outdatadir_Raw, 'Raw_Trial_*.mat'));
+        if ~isempty(rawFiles)
+            S0 = load(fullfile(outdatadir_Raw, rawFiles(1).name), 'this_recdata_raw');
+            labels = S0.this_recdata_raw.label;
             procLabels = labels(Connected_Channels);
             goodRef = intersect(refLabelsGood, procLabels, 'stable');
         else
@@ -115,10 +115,10 @@ if compute_zscore
         fprintf('.. Results saved in Debugging_Info.Method_iii_ZScore\n');
         
         % Load labels for goodRef (without Z-score filtering, since we didn't apply it)
-        wbFiles = dir(fullfile(outdatadir_WideBand, 'WideBand_Trial_*.mat'));
-        if ~isempty(wbFiles)
-            S0 = load(fullfile(outdatadir_WideBand, wbFiles(1).name), 'this_recdata_wideband');
-            labels = S0.this_recdata_wideband.label;
+        rawFiles = dir(fullfile(outdatadir_Raw, 'Raw_Trial_*.mat'));
+        if ~isempty(rawFiles)
+            S0 = load(fullfile(outdatadir_Raw, rawFiles(1).name), 'this_recdata_raw');
+            labels = S0.this_recdata_raw.label;
             goodRef = labels(Connected_Channels);
         else
             goodRef = Connected_Channels;  % Fallback
@@ -128,10 +128,10 @@ else
     fprintf('\n.. Method iii (Z-score) skipped (compute_zscore=false)\n');
     
     % Load labels for goodRef (without Z-score filtering)
-    wbFiles = dir(fullfile(outdatadir_WideBand, 'WideBand_Trial_*.mat'));
-    if ~isempty(wbFiles)
-        S0 = load(fullfile(outdatadir_WideBand, wbFiles(1).name), 'this_recdata_wideband');
-        labels = S0.this_recdata_wideband.label;
+    rawFiles = dir(fullfile(outdatadir_Raw, 'Raw_Trial_*.mat'));
+    if ~isempty(rawFiles)
+        S0 = load(fullfile(outdatadir_Raw, rawFiles(1).name), 'this_recdata_raw');
+        labels = S0.this_recdata_raw.label;
         goodRef = labels(Connected_Channels);
     else
         goodRef = Connected_Channels;  % Fallback

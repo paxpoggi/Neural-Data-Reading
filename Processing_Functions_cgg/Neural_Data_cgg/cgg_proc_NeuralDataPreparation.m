@@ -757,7 +757,8 @@ parfor tidx=1:trialcount
             ((~(exist(this_trial_MUA_file_name,'file'))) && want_MUA)||...
             ((~(exist(this_trial_Spike_file_name,'file'))) && want_Spike));
     
-    if ~(exist(this_trial_wideband_file_name,'file')) && ~have_desired_data
+    % Check if Raw file exists (we now save Raw instead of Wideband initially)
+    if ~(exist(this_trial_Raw_file_name,'file')) && ~have_desired_data
     
 % Wrapping this to suppress the annoying banner.
 ft_defaults;
@@ -872,11 +873,14 @@ end
 
 
 
-% Save wideband data with retry logic for cluster filesystem robustness
-kaa_saveWithRetry(this_trial_wideband_file_name, 'this_recdata_wideband', this_recdata_wideband);
+% Save raw data with retry logic for cluster filesystem robustness
+kaa_saveWithRetry(this_trial_Raw_file_name, 'this_recdata_raw', this_recdata_wideband);
 
-if keep_raw && (tidx <= debug_keep_n_trials)
-    kaa_saveWithRetry(this_trial_Raw_file_name, 'this_recdata_wideband', this_recdata_wideband);
+% Optionally save wideband for debug trials only (if keep_wideband is true)
+% Note: Wideband will be saved later after rereferencing for all trials
+% We only save it here for debug trials to preserve the pre-rereferenced state
+if keep_wideband && (tidx <= debug_keep_n_trials)
+    kaa_saveWithRetry(this_trial_wideband_file_name, 'this_recdata_wideband', this_recdata_wideband);
 end
 
     end
@@ -901,10 +905,10 @@ if ~(exist(this_area_clustering_file_name,'file'))
         is_any_previously_rereferenced,Debugging_Info,goodRef] = ...
         cgg_getDisconnectedChannelsAllMethods_v3(clustering_trial_count,...
         'inputfolder',inputfolder,'outdatadir',outdatadir,...
-        'Activity_Type', 'WideBand','probe_area',this_probe_area,...
+        'Activity_Type', 'Raw','probe_area',this_probe_area,...
         'SessionName',SessionName,...
         'clustering_file_name',this_area_clustering_file_name,...
-        'outdatadir_WideBand',outdatadir_WideBand,...
+        'outdatadir_Raw',outdatadir_Raw,...
         'compute_zscore',true,'use_zscore',false);
     
     % Results are already saved by the orchestrator function
@@ -916,10 +920,10 @@ else
     is_any_previously_rereferenced=m_Cluster.is_any_previously_rereferenced;
     
     % Get goodRef for rereferencing (load labels and use Connected_Channels)
-    wbFiles = dir(fullfile(outdatadir_WideBand, 'WideBand_Trial_*.mat'));
-    if ~isempty(wbFiles)
-        S0 = load(fullfile(outdatadir_WideBand, wbFiles(1).name), 'this_recdata_wideband');
-        labels = S0.this_recdata_wideband.label;
+    rawFiles = dir(fullfile(outdatadir_Raw, 'Raw_Trial_*.mat'));
+    if ~isempty(rawFiles)
+        S0 = load(fullfile(outdatadir_Raw, rawFiles(1).name), 'this_recdata_raw');
+        labels = S0.this_recdata_raw.label;
         goodRef = labels(Connected_Channels);
     else
         goodRef = Connected_Channels;  % Fallback
@@ -976,6 +980,9 @@ parfor tidx=1:trialcount
    this_trial_wideband_file_name=...
        sprintf([outdatadir_WideBand filesep 'WideBand_Trial_%d.mat'],...
        this_trial_index);
+   this_trial_Raw_file_name=...
+       sprintf([outdatadir_Raw filesep 'Raw_Trial_%d.mat'],...
+       this_trial_index);
    this_trial_Notch_file_name=...
        sprintf([outdatadir_Notch filesep 'Notch_Trial_%d.mat'],...
        this_trial_index);
@@ -1000,8 +1007,8 @@ parfor tidx=1:trialcount
         % 30 ksps double-precision data takes up about 1 GB per channel-hour.
         nlFT_setMemChans(8); 
         
-    m_wideband = matfile(this_trial_wideband_file_name,'Writable',true);
-    this_recdata_wideband=m_wideband.this_recdata_wideband;
+    m_raw = matfile(this_trial_Raw_file_name,'Writable',true);
+    this_recdata_wideband=m_raw.this_recdata_raw;
 
 
 
@@ -1058,17 +1065,17 @@ parfor tidx=1:trialcount
 
 end
 %%
-if ~keep_wideband
-    rmdir(outdatadir_WideBand, 's');
+if ~keep_raw
+    rmdir(outdatadir_Raw, 's');
 elseif isfinite(debug_keep_n_trials)
     % Keep only first N trials, delete the rest
-    wb_files = dir(fullfile(outdatadir_WideBand, 'WideBand_Trial_*.mat'));
-    for f_idx = 1:length(wb_files)
-        tokens = regexp(wb_files(f_idx).name, '_Trial_(\d+)\.mat', 'tokens');
+    raw_files = dir(fullfile(outdatadir_Raw, 'Raw_Trial_*.mat'));
+    for f_idx = 1:length(raw_files)
+        tokens = regexp(raw_files(f_idx).name, '_Trial_(\d+)\.mat', 'tokens');
         if ~isempty(tokens)
             trial_num = str2double(tokens{1}{1});
             if trial_num > debug_keep_n_trials
-                delete(fullfile(outdatadir_WideBand, wb_files(f_idx).name));
+                delete(fullfile(outdatadir_Raw, raw_files(f_idx).name));
             end
         end
     end

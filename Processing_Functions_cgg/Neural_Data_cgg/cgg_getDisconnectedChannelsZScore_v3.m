@@ -1,16 +1,16 @@
 function [badZIdx, Debugging_Info, refLabelsGood] = cgg_getDisconnectedChannelsZScore_v3(...
-    Connected_Channels, outdatadir_WideBand, clustering_file_name, Debugging_Info, varargin)
+    Connected_Channels, outdatadir_Raw, clustering_file_name, Debugging_Info, varargin)
 %CGG_GETDISCONNECTEDCHANNELSZSCORE_V3 Method iii: Z-score screening for disconnected channels
 %
 %   [badZIdx, Debugging_Info, refLabelsGood] = cgg_getDisconnectedChannelsZScore_v3(
-%       Connected_Channels, outdatadir_WideBand, clustering_file_name, Debugging_Info, ...)
+%       Connected_Channels, outdatadir_Raw, clustering_file_name, Debugging_Info, ...)
 %
 %   This function performs Z-score based screening to identify disconnected channels
 %   by analyzing robust statistics across multiple trials.
 %
 %   Parameters:
 %       Connected_Channels    - Current connected channels (from Methods i & ii)
-%       outdatadir_WideBand   - Path to wideband trial files directory
+%       outdatadir_Raw   - Path to raw trial files directory
 %       clustering_file_name  - Path to Clustering_Results.mat file
 %       Debugging_Info        - Existing Debugging_Info structure (will be updated)
 %       Optional parameters:
@@ -30,12 +30,12 @@ zscore_threshold = CheckVararginPairs('zscore_threshold', 7, varargin{:});
 fraction_threshold = CheckVararginPairs('fraction_threshold', 0.01, varargin{:});
 nSampleTrials = CheckVararginPairs('nSampleTrials', 10, varargin{:});
 
-% --- Build list of saved wideband trial files (produced by the first parfor)
-wbDir = outdatadir_WideBand;
-wbFiles = dir(fullfile(wbDir, 'WideBand_Trial_*.mat'));
-assert(~isempty(wbFiles), 'No WideBand_Trial_*.mat files found in %s', wbDir);
+% --- Build list of saved raw trial files (produced by the first parfor)
+rawDir = outdatadir_Raw;
+rawFiles = dir(fullfile(rawDir, 'Raw_Trial_*.mat'));
+assert(~isempty(rawFiles), 'No Raw_Trial_*.mat files found in %s', rawDir);
 
-nTot = numel(wbFiles);
+nTot = numel(rawFiles);
 nSampleTrials = min(nSampleTrials, nTot);
 fprintf('.. Method iii: Sampling %d trial(s) from %d available trial(s)\n', nSampleTrials, nTot);
 
@@ -44,8 +44,8 @@ rng(0);   % optional reproducibility
 pick = randperm(nTot, nSampleTrials);
 
 % --- Load the first picked trial to get labels & Connected_Channels mapping
-S0 = load(fullfile(wbDir, wbFiles(pick(1)).name), 'this_recdata_wideband');
-labels = S0.this_recdata_wideband.label;
+S0 = load(fullfile(rawDir, rawFiles(pick(1)).name), 'this_recdata_raw');
+labels = S0.this_recdata_raw.label;
 
 % IMPORTANT: translate Connected_Channels (indices) -> labels AFTER remap
 refLabels0 = labels(Connected_Channels);
@@ -54,10 +54,10 @@ refIdx = match_str(labels, refLabels0);
 fprintf('.. Method iii: Testing %d reference channel(s) for stability\n', numel(refIdx));
 
 % --- Concatenate candidate reference data across the chosen trials
-Xcat = [];   % [nRef x total_time_across_trials]
+Xcat = [];   % [nChannels x total_time_across_trials]
 for ii = 1:numel(pick)
-    Si = load(fullfile(wbDir, wbFiles(pick(ii)).name), 'this_recdata_wideband');
-    Xi = Si.this_recdata_wideband.trial{1}(refIdx,:);   % each file has 1 trial
+    Si = load(fullfile(rawDir, rawFiles(pick(ii)).name), 'this_recdata_raw');
+    Xi = Si.this_recdata_raw.trial{1}(refIdx,:);   % each file has 1 trial
     % Optional: Xi = Xi(:,1:2:end);  % light decimation to save RAM
     Xcat = [Xcat, Xi]; %#ok<AGROW>
 end
