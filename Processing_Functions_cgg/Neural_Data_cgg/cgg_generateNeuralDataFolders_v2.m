@@ -94,6 +94,10 @@ cfg_tmp=cfg.outdatadir.Experiment.Session.Activity.Area;
 [cfg_tmp,~] = cgg_generateFolderAndPath('MUA','MUA',cfg_tmp,'WantDirectory',WantDirectory);
 cfg.outdatadir.Experiment.Session.Activity.Area=cfg_tmp;
 
+cfg_tmp=cfg.outdatadir.Experiment.Session.Activity.Area;
+[cfg_tmp,~] = cgg_generateFolderAndPath('Raw','Raw',cfg_tmp,'WantDirectory',WantDirectory);
+cfg.outdatadir.Experiment.Session.Activity.Area=cfg_tmp;
+
 % Make the Channel Clustering Folder output folder names
 cfg_tmp=cfg.outdatadir.Experiment.Session.Activity.Area;
 [cfg_tmp,~] = cgg_generateFolderAndPath('Connected','Connected',cfg_tmp,'WantDirectory',WantDirectory);
