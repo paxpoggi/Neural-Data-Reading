@@ -62,8 +62,7 @@ spikeFilePath = '/panfs/accrepfs.vampire/home/poggigp/Womelsdorf Lab/Spike_Align
 
 % in ACCRE, needed to unset matlab library stuff so ran this:
 % make sure to first activate python with something like:   
-% source ~/venvs/my_virtual_python_env/bin/activate e.g. 
-% souce ~/venvs/spike_align_v3/bin/activate
+% ~/venvs/my_virtual_python_env/bin/activate
 % also, add to path Spike_Alignment folder
 
 pybin = '/home/poggigp/venvs/spike_align_v3/bin/python';
