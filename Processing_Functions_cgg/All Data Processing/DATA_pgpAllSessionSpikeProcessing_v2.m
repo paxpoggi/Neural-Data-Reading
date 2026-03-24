@@ -47,7 +47,7 @@ pgp_exportCfgToJson( ...
   'sorted_root_base', sorted_root_base, ...
   'Epoch', Epoch);
 
-spikeFilePath = '/panfs/accrepfs.vampire/home/poggigp/Womelsdorf Lab/Spike_Alignment/pgp_spikeTrialAlignment_v3.py';
+spikeFilePath = '/panfs/accrepfs.vampire/home/poggigp/Womelsdorf Lab/Spike_Alignment/pgp_spikeTrialAlignment_v4.py';
 
 %% ----FixME - make the argument inputs programmatic not hard coded---
 % ---- Python: run spike alignment on everything in JSON ----
@@ -55,7 +55,7 @@ spikeFilePath = '/panfs/accrepfs.vampire/home/poggigp/Womelsdorf Lab/Spike_Align
 % for clarity
 % must have python loaded in environment to use
 system(sprintf(['python -u "%s" --cfg_json "%s" --out_subdir SpikeAligned ' ...
-                '--Fs 30mak000 --bin_ms 1 --win_before 1.5 --win_after 1.5  --win_before_base 0 --win_after_base 1 --qualities 4,5'], ...
+                '--Fs 30mak000 --bin_ms 1 --win_before 1.5 --win_after 1.5  --win_before_base 0.15 --win_after_base .4 --qualities 4,5'], ...
                 spikeFilePath, json_out));
 
 
