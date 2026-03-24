@@ -211,7 +211,7 @@ oldwarnstate = warning('off');
 
 % Limit the number of channels LoopUtil will load into memory at a time.
 % 30 ksps double-precision data takes up about 1 GB per channel-hour.
-nlFT_setMemChans(8);
+nlFT_setMemChans(6);
 
 %% Read metadata (paths, headers, and channel lists).
 
@@ -220,6 +220,10 @@ nlFT_setMemChans(8);
 [ folders_openephys folders_intanrec folders_intanstim folders_unity ] = ...
   euUtil_getExperimentFolders(inputfolder);
 
+% debugging code
+% disp(inputfolder)
+% disp('folders_openephys:'); disp(folders_openephys)
+% disp('folders_intanrec:');  disp(folders_intanrec)
 % FIXME - Assume one recorder dataset and 0 or 1 stimulator datasets.
 
 % If the data is recorded in OpenEphys it will search and recognize that
@@ -233,6 +237,8 @@ end
 
 % Check for stimulator data
 have_stim = false;
+
+
 if ~isempty(folders_intanstim)
   folder_stim = folders_intanstim{1};
   have_stim = true;
@@ -720,7 +726,7 @@ oldwarnstate = warning('off');
 
 % Limit the number of channels LoopUtil will load into memory at a time.
 % 30 ksps double-precision data takes up about 1 GB per channel-hour.
-nlFT_setMemChans(8);  
+nlFT_setMemChans(6);  
 
 this_rectrialdeftable = rectrialdeftable(tidx,:);
 this_rectrialdefs = rectrialdefs(tidx,:);
@@ -758,8 +764,15 @@ switch probe_mapping
         this_channel_map = chanmap_rec_mapped;
 end
 
-preproc_config_rec.channel = ...
-  ft_channelselection( this_channel_map(this_probe_selection), rechdr.label, {} );
+if have_chanmap
+	preproc_config_rec.channel = ...
+  	ft_channelselection( this_channel_map(this_probe_selection), rechdr.label, {} );
+else
+	preproc_config_rec.channel = ...
+  	ft_channelselection(this_probe_selection, rechdr.label, {} );
+end
+% preproc_config_rec.channel = ...
+%   ft_channelselection( this_channel_map(this_probe_selection), rechdr.label, {} );
 
 disp('.. Reading wideband recorder data.');
 this_recdata_wideband = ft_preprocessing( preproc_config_rec );

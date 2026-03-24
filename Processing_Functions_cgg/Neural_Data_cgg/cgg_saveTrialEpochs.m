@@ -47,7 +47,7 @@ TrialNumbers=Input(2).TrialNumber;
 
 [~,ChosenTrial]=unique(TrialNumbers,'last');
 
-TrialChosen=false(1,length(NumData));
+TrialChosen=false(1,NumData);
 TrialChosen(ChosenTrial)=true;
 TrialChosen=num2cell(TrialChosen);
 
@@ -74,12 +74,33 @@ ClusteringDir=cfg_Common.TargetDir.Aggregate_Data.Folder.SubFolder.path;
 CommonNameExt='CommonBadChannels.mat';
 CommonPathNameExt=[ClusteringDir filesep CommonNameExt];
 
-m_CommonClustering=matfile(CommonPathNameExt,"Writable",false);
-CommonDisconnectedChannels=m_CommonClustering.CommonDisconnectedChannels;
+CommonDisconnectedChannels=[];
+if exist(CommonPathNameExt, 'file')
+    info = whos('-file', CommonPathNameExt);
+    if any(strcmp({info.name},'CommonBadChannels'))
+        m_CommonClustering = matfile(CommonPathNameExt,"Writable",false);
+        CommonDisconnectedChannels = m_CommonClustering.CommonDisconnectedChannels;
+    else
+        warning('CommonBadChannels:missingVar',...
+            ['File exists but variable "CommonDisconnectedChannels" not found: %s.\n'...
+            'Proceeding with no common bad channels'], CommonPathNameExt);
+    end
+else
+    warning('CommonBadChannels:notFound',...
+        ['Common bad file channel not found: %s.\n'...
+        'Proceding with no common bad channels'], CommonPathNameExt);
+end
 
+assert(isvector(CommonDisconnectedChannels) || isempty(CommonDisconnectedChannels), ...
+    'CommonDisconnectedChannels must be a vector of channel indices or empty.');
+assert(isvector(Disconnected_Channels), 'Disconnected_Channels must be a vector of channel indices.');
+assert(isvector(NotSignificant_Channels), 'NotSignificant_Channels must be a vector of channel indices.');
+%m_CommonClustering=matfile(CommonPathNameExt,"Writable",false);
+%CommonDisconnectedChannels=m_CommonClustering.CommonDisconnectedChannels;
+
+    
 %%
-
-Target_IDX=NaN(1,length(NumData));
+Target_IDX = NaN(1,NumData);
 SizeIssue=false;
 
 %% Update Information Setup
@@ -97,7 +118,7 @@ fprintf(Current_Message);
 
 %%
 
-parfor didx=1:NumData
+for didx=1:NumData
     this_TrialNumber=TrialNumbers(didx);
 %     disp(this_TrialNumber);
     if isDataCell
@@ -187,7 +208,9 @@ Target=trialVariables(Target_IDX);
     end
 
 % Save Session Processing Parameters
-WriteYaml(ParameterProcessing_SaveNameFull, cfg_param);
+% make sure cfg_param is yaml safe
+cfg_param_yaml = yaml_sanitize(cfg_param);
+WriteYaml(ParameterProcessing_SaveNameFull, cfg_param_yaml);
     
     
 function nUpdateWaitbar(~)

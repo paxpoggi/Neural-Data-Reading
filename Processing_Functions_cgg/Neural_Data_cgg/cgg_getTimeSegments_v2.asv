@@ -137,14 +137,9 @@ this_trial_fsample(tidx)=1/mode(diff(this_trial_time));
 %BE MOVED TO A NEW FUNCTION PRODUCING A SINGLE VALUE!!!
     this_trial_frame_data=this_frame_data(this_frame_data.TrialCounter==this_trial_index,:);
     
-    FrameData = this_trial_frame_data;
-
-    % Only drop a leading Reward row if we are NOT using Reward as an anchor
-    wantReward = any(strcmp(FrameDescriptor,"Reward"));  % FrameDescriptor is a cell here
-    if ~wantReward
-        if ~isempty(FrameData) && strcmp(FrameData.TrialEpoch(1),"Reward")
-            FrameData(1,:) = [];
-        end
+    FrameData=this_trial_frame_data;
+    if strcmp(FrameData.TrialEpoch(1),'Reward')
+    FrameData(1,:)=[];
     end
 %     FrameDescriptor={'Fixation','Fixation'};
 %     DescriptorPlace={'START','END'};

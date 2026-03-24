@@ -27,6 +27,7 @@ function [ maplabelsraw, maplabelscooked, recordedlabels ] = ...
 % Initialize.
 maplabelsraw = {};
 maplabelscooked = {};
+recordedlabels = {};
 
 
 % Try to fetch the channel mapping and the Open Ephys dataset's header.

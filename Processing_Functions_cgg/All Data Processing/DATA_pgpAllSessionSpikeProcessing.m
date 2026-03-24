@@ -14,7 +14,7 @@ for sidx=1:length(cfg)
     ExperimentName=cfg(sidx).ExperimentName;
     monkey_name=cfg(sidx).Monkey_Name;
 
-cgg_procFullTrialPreparation_v3(...
+pgp_procProcessingBehaviorOnly(...
     'inputfolder',cfg(sidx).inputfolder,'outdatadir',cfg(sidx).outdatadir,'Epoch',Epoch, 'ExperimentName', ExperimentName, 'monkey_name', monkey_name);
 
 end

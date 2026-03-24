@@ -93,7 +93,7 @@ clustering_trial_count=30;
 % will not have an effect if all the contacts for a probe are selected
 % since they will all be remapped together.
 
-probe_mapping='mapped'; %unmapped, mapped, recorded
+probe_mapping='recorded'; %unmapped, mapped, recorded
 
 SessionName = CheckVararginPairs('SessionName', 'None', varargin{:});
 
@@ -139,8 +139,8 @@ keep_wideband=false;
 % the raw wideband and notch filtered. Regular wideband is rereferenced as
 % well
 
-keep_raw = true;
-keep_notch = true;
+keep_raw = false;
+keep_notch = false;
 
 %%
 

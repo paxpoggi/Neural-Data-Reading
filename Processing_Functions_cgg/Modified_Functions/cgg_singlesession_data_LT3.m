@@ -1,5 +1,6 @@
 %% Compile Data Script - single session data
-function [TrialDATA, BlockDATA, this_ouput_test]  = cgg_singlesession_data_LT3(folder_name, session_file, data_path, Processed_path, Area, MnkID)
+function [TrialDATA, BlockDATA]  = cgg_singlesession_data_LT3(folder_name, session_file, data_path, Processed_path, Area, MnkID, ExperimentName)
+
 
 %Practice data
 % folder_name = 'Fr_EStim_01_21-11-12_009_01';
@@ -8,11 +9,23 @@ function [TrialDATA, BlockDATA, this_ouput_test]  = cgg_singlesession_data_LT3(f
 
 %[trialData, blockData] = ProcessSingleSessionData_FLU('exptType','FLU',[data_path filesep folder_name filesep session_file],'Spectrum');
 
-
-% Check that you are adding new sessions to existing data
-newStr = split(folder_name,"_");
-session_num = sscanf(newStr{end-1}, '%d');
-
+switch ExperimentName
+    case 'Wotan_FLToken_Probe_01'
+        % Check that you are adding new sessions to existing data
+        newStr = split(folder_name,"_");
+        session_num = sscanf(newStr{end-1}, '%d');
+    case 'Frey_FLToken_Probe_02'
+        % Check that you are adding new sessions to existing data
+        newStr = split(folder_name,"_");
+        session_num = sscanf(newStr{end-1}, '%d');
+     case 'Frey_FLToken_Probe_03'
+         % Check that you are adding new sessions to existing data
+        newStr = split(folder_name,"_");
+        session_num = sscanf(newStr{end-1}, '%d');
+    case 'IDED_DBC_AH_AN'
+        newStr = split(folder_name,"_");
+        session_num = str2double(newStr{3});
+ end
 main_path = [data_path filesep folder_name filesep session_file]; 
 % Processed_path = [data_path filesep folder_name filesep session_file]; 
 
@@ -35,57 +48,120 @@ blockData = blockData.blockData;
 frameData = load([Processed_path filesep 'ProcessedData' filesep 'FrameData.mat']);
 frameData = frameData.frameData;
 
+switch ExperimentName
+    case 'Wotan_FLToken_Probe_01'
+        % Block feature
+        BlkDef_name = dir([main_path filesep 'RuntimeData' filesep 'SessionSettings' filesep 'FDF03*.*']);
+        BlkDef_file = BlkDef_name.name;
+        BlkDef_file = split(BlkDef_file ,"_");
+        %stimulatio setting
+        stimulation_setting = BlkDef_file{9};
+    case 'Frey_FLToken_Probe_02'
+        % Block feature
+        BlkDef_name = dir([main_path filesep 'RuntimeData' filesep 'SessionSettings' filesep 'FDF03*.*']);
+        BlkDef_file = BlkDef_name.name;
+        BlkDef_file = split(BlkDef_file ,"_");
+        %stimulatio setting
+        stimulation_setting = BlkDef_file{9};
 
-% Block feature
-BlkDef_name = dir([main_path filesep 'RuntimeData' filesep 'SessionSettings' filesep 'FDF03*.*']);
-BlkDef_file = BlkDef_name.name;
-BlkDef_file = split(BlkDef_file ,"_");
+    case 'Frey_FLToken_Probe_03'
+        % Block feature
+        BlkDef_name = dir([main_path filesep 'RuntimeData' filesep 'SessionSettings' filesep 'FDF03*.*']);
+        BlkDef_file = BlkDef_name.name;
+        BlkDef_file = split(BlkDef_file ,"_");
+        %stimulatio setting
+        stimulation_setting = BlkDef_file{9};
 
-%Stimulation setting
-stimulation_setting = BlkDef_file{9};
+    case 'IDED_DBC_AH_AN'
+        BlkDef_name = dir([main_path filesep 'RuntimeData' filesep 'SessionSettings' filesep 'FL2D*.*']);
+        BlkDef_file = BlkDef_name.name;
+        BlkDef_file = split(BlkDef_file ,"_");
+        %Stimulation setting
+        stimulation_setting = 'NONE';
+
+end
 
 %feature target:
-if verLessThan('matlab','9.8')
-BlkDef_rules = readtable([BlkDef_name.folder filesep BlkDef_name.name], 'HeaderLines', 1);
-else
-BlkDef_rules = readtable([BlkDef_name.folder filesep BlkDef_name.name], 'ReadVariableNames', false, 'HeaderLines', 1);
+% if verLessThan('matlab','9.8')
+% BlkDef_rules = readtable([BlkDef_name.folder filesep BlkDef_name.name], 'HeaderLines', 1);
+% else
+% BlkDef_rules = readtable([BlkDef_name.folder filesep BlkDef_name.name], 'ReadVariableNames', false, 'HeaderLines', 1);
+% end
+% disp([BlkDef_name.folder filesep BlkDef_name.name])
+% Var3 = BlkDef_rules.Var3;
+% relFeat_idx = find(contains(Var3,'ContextNums'));
+% 
+% BlkFeatureTarget = zeros(36,1); % 1-4
+% 
+% for i = 1:36
+% 
+%     relfeatures = Var3(relFeat_idx(i));
+%     relfeatures = split(relfeatures ,",");
+% 
+%     feats = zeros(4,1);
+% 
+%     feat1 = relfeatures{1};
+%     feat1(1) = []; 
+% 
+%     feats(1) = str2num(feat1);
+%     feats(2) = str2num(relfeatures{2});
+%     feats(3) = str2num(relfeatures{3});
+%     %not using texture as feature??
+%     %feats(4) = str2num(relfeatures{4});
+% 
+%     feat4 = relfeatures{5};
+%     feat4(end) = []; 
+%     feats(4) = str2num(feat4);
+% 
+%     BlkFeatureTarget(i,:) = find(feats > -1);
+% end
+
+% --- Feature target parsing (robust for this JSON-like BlockDef format) ---
+blkPath = fullfile(BlkDef_name.folder, BlkDef_name.name);
+txt     = fileread(blkPath);  % read raw text
+
+% Find each RelevantFeatureTemplate block: 5 groups (one per feature dimension)
+pat = '"RelevantFeatureTemplate"\s*:\s*\[\s*\[([^\]]*)\]\s*,\s*\[([^\]]*)\]\s*,\s*\[([^\]]*)\]\s*,\s*\[([^\]]*)\]\s*,\s*\[([^\]]*)\]\s*\]';
+tokens = regexp(txt, pat, 'tokens');
+
+N = numel(tokens);
+if N == 0
+    error('No RelevantFeatureTemplate blocks found in %s', blkPath);
 end
-disp([BlkDef_name.folder filesep BlkDef_name.name])
-Var3 = BlkDef_rules.Var3;
-relFeat_idx = find(contains(Var3,'ContextNums'));
 
-BlkFeatureTarget = zeros(36,1); % 1-4
+BlkFeatureTarget = zeros(N,1);
 
-for i = 1:36
-
-    relfeatures = Var3(relFeat_idx(i));
-    relfeatures = split(relfeatures ,",");
-
-    feats = zeros(4,1);
-
-    feat1 = relfeatures{1};
-    feat1(1) = []; 
-
-    feats(1) = str2num(feat1);
-    feats(2) = str2num(relfeatures{2});
-    feats(3) = str2num(relfeatures{3});
-    %not using texture as feature??
-    %feats(4) = str2num(relfeatures{4});
-
-    feat4 = relfeatures{5};
-    feat4(end) = []; 
-    feats(4) = str2num(feat4);
-
-    BlkFeatureTarget(i,:) = find(feats > -1);
+for i = 1:N
+    feats = nan(5,1);
+    for k = 1:5
+        % tokens{i}{k} looks like "-1" or "7" (sometimes with spaces/commas)
+        strk = strtrim(tokens{i}{k});
+        % strip any trailing commas and spaces
+        strk = regexprep(strk, ',.*$', '');
+        val  = str2double(strk);
+        if isnan(val), val = -1; end
+        feats(k) = val;
+    end
+    idx = find(feats > -1, 1, 'first');  % first feature that is not -1
+    if isempty(idx)
+        BlkFeatureTarget(i) = NaN;  % no active feature found (unlikely)
+    else
+        BlkFeatureTarget(i) = idx;  % 1..5
+    end
 end
+
+% N blocks were parsed; later you can truncate/align to Nblk if needed:
+% BlkFeatureTarget = BlkFeatureTarget(1:min(N, Nblk));
+
 
 %stim type
-if stimulation_setting == 'SREL' == 1
+if strcmpi(stimulation_setting, 'SREL')    
     Stim_object = 1; % Rewarded object stim
-elseif stimulation_setting  == 'SIRR' == 1
+elseif strcmpi(stimulation_setting,'SIRR')
     Stim_object = 2 ;% Unrewarded object stim
 else
-    error = 'no stim object';
+    % no stimulation 
+    Stim_object = 0;
 end
 
 
@@ -115,12 +191,12 @@ Nblk = length(BlockDATA.BlockNum);
 BlockDATA.MnkID = MnkID*ones(Nblk,1); %1 = Frey, 2 = ?
 BlockDATA.SessionNum = session_num*ones(Nblk,1);
 BlockDATA.BlockLabel = blockData.BlockID;
-BlockDATA.Dimenion = blockData.NumActiveDims; %[1,2,3]
+BlockDATA.Dimension = blockData.NumActiveDims; %[1,2,3]
 BlockDATA.GainCond = blockData.MeanPositiveTokens; %[2,3]
 BlockDATA.LossCond = blockData.MeanNegativeTokens; %[-1,-3]
 BlockDATA.StimSession = Stim_object*ones(Nblk,1); %1 = SR+, 2 = SR-
 BlockDATA.StimBlockCond = (Stim_pattern(1:Nblk))';
-BlockDATA.Area = Area*ones(Nblk,1); %1 = ACC, 2 = CD
+% BlockDATA.Area = Area*ones(Nblk,1); %1 = ACC, 2 = CD
 BlockDATA.TargetFeature = BlkFeatureTarget(1:Nblk,1); % 1-4
 
 
@@ -131,13 +207,13 @@ Ntrls = length(TrialDATA.Block);
 TrialDATA.TrialInExperiment = trialData.TrialInExperiment;
 TrialDATA.TrialInBlock = trialData.TrialInBlock;
 TrialDATA.SessionNum = session_num*ones(Ntrls,1);
-TrialDATA.Area = Area*ones(Ntrls,1);
+% TrialDATA.Area = Area*ones(Ntrls,1);
 TrialDATA.StimSession = Stim_object*ones(Ntrls,1); %1 = SR+, 2 = SR-
 TrialDATA.Accuracy = oc;
 TrialDATA.RT = Reactiontime;
 TrialDATA.Stim = Stimulation;
 
-DimenionVec = zeros(Ntrls,1);
+DimensionVec = zeros(Ntrls,1);
 GainCondVec = zeros(Ntrls,1);
 LossCondVec = zeros(Ntrls,1);
 TokenCondVec = zeros(Ntrls,1);
@@ -161,7 +237,7 @@ for i = 1:Nblk
 
     idx = find(TrialDATA.Block == i);
 
-    DimenionVec(idx) = BlockDATA.Dimenion(i);
+    DimensionVec(idx) = BlockDATA.Dimension(i);
     GainCondVec(idx) = BlockDATA.GainCond(i);
     LossCondVec(idx) = BlockDATA.LossCond(i);
     TokenCondVec(idx) = BlockDATA.TokenCond(i);
@@ -169,7 +245,7 @@ for i = 1:Nblk
     TargetFeatureVec(idx) = BlockDATA.TargetFeature(i);
 end
 
-TrialDATA.iCndDim = DimenionVec;
+TrialDATA.iCndDim = DimensionVec;
 TrialDATA.GainCond = GainCondVec;
 TrialDATA.LossCond = LossCondVec;
 TrialDATA.iCndTok = TokenCondVec;
@@ -319,5 +395,4 @@ TrialDATA.ExplObjduration_no4 = ExplObjduration_no4Vec;
 % Final dataset: TrialDATA, BlockDATA
 
 end
-
 

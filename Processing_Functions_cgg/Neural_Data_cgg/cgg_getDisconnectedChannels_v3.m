@@ -68,10 +68,13 @@ InData_WB=cell2mat(InData_WB);
 InData_LFP=cell2mat(InData_LFP);
 [NumChannels,~]=size(InData_WB);
 
+%debug line to check num of channels
+sprintf('NumChannels %d',NumChannels)
+
 InData={InData_LFP,InData_WB};
 
 %%
-cfg_disconnected = PARAMETERS_cgg_getDisconnectedChannels;
+cfg_disconnected = PARAMETERS_cgg_getDisconnectedChannels('NumChannels',NumChannels);
 
 Start_Group=cfg_disconnected.Start_Group;
 End_Group=cfg_disconnected.End_Group;

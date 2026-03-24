@@ -95,14 +95,6 @@ S1 = load(sessTrialPath);   TrialDATA_session  = S1.TrialDATA;
 S2 = load(sessBlockPath);   BlockDATA_session  = S2.BlockDATA;
 S3 = load(trialVarsPath);   trialVariables     = S3.trialVariables;
 
-assert(exist(sessTrialPath,'file')==2 && exist(sessBlockPath,'file')==2 && exist(trialVarsPath,'file')==2, ...
-    'Missing session files:\n%s\n%s\n%s', sessTrialPath, sessBlockPath, trialVarsPath);
-
-assert(exist('trialVariables','var')==1 && isstruct(trialVariables), 'trialVariables not loaded as struct');
-assert(isfield(trialVariables,'TrialNumber'), ...
-    'trialVariables missing TrialNumber. Fields are: %s', strjoin(fieldnames(trialVariables),', '));
-
-
 Session_Start_Message=sprintf('*** Starting Processing Session: %s',cfg.SessionName);
 Session_End_Message=sprintf('*** Finished Processing Session: %s',cfg.SessionName);
 disp(Session_Start_Message);
@@ -139,14 +131,6 @@ end
 % ---- Session-level trial variables (compute once, reuse per probe) from above ----
 
 TrialVariableTrialNumber = [trialVariables(:).TrialNumber];
-
-%% Sanity checks (add here, before segmentation/criteria)
-assert(~isempty(trialVariables) && isstruct(trialVariables), ...
-    'trialVariables not loaded properly');
-assert(isfield(trialVariables,'TrialNumber'), ...
-    'trialVariables missing TrialNumber. Fields are: %s', strjoin(fieldnames(trialVariables),', '));
-assert(numel(TrialVariableTrialNumber) == numel(trialVariables), ...
-    'Mismatch between TrialVariableTrialNumber and trialVariables length');
 
 %% Iterate through all Areas
 
@@ -309,7 +293,7 @@ Output(2).Significant_Channels=Significant_Channels;
 Output(3).Significant_Channels=NotSignificant_Channels;
 
 %% 
-SizeIssue = pgp_saveTrialEpochs(Output,this_probe_area,trialVariables,Epoch,Probe_Order,cfg_directories,cfg_param);
+SizeIssue = cgg_saveTrialEpochs(Output,this_probe_area,trialVariables,Epoch,Probe_Order,cfg_directories,cfg_param);
 
 if SizeIssue
     SessionIssue=true;

@@ -24,12 +24,15 @@ Sampling_Period_Data=1/SamplingFrequency*1000; %Get the sampling period in ms
 
 InIncrement=round(Regression_SP/Sampling_Period_Data);
 
-Minimum_Length_Data_Samples=round(Minimum_Length/Sampling_Period_Data/Regression_SP);
+Minimum_Length_Data_Samples=round(Minimum_Length/Regression_SP);
+% no need to divide by Sampling_Period_Data again, both min length and
+% regression SP are in ms already
+%Minimum_Length_Data_Samples=round(Minimum_Length/Sampling_Period_Data/Regression_SP);
 
 [Data_Fit,MatchArray_Fit] = cgg_getRegressionInputs(InData,TrialNumbers,trialVariables,GainValue,LossValue,varargin{:});
 
 %%
-[P_Value,R_Value,P_Value_Coefficients,CoefficientNames] = cgg_procTrialVariableRegression(Data_Fit,MatchArray_Fit,InIncrement);
+[P_Value,R_Value,P_Value_Coefficients,CoefficientNames] = pgp_procTrialVariableRegression(Data_Fit,MatchArray_Fit,InIncrement);
 %%
 [this_Data] = cgg_procSignificanceOverChannels(P_Value,Significance_Value,Minimum_Length_Data_Samples);
 

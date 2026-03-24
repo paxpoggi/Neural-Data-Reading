@@ -59,16 +59,23 @@ function result = scan(r)
         result = scan_string(r);
     elseif iscell(r)
         result = scan_cell(r);
+    elseif iscategorical(r)
+        result = scan_categorical(r);           % <-- NEW
+    elseif istable(r)
+        % flatten tables to scalar struct, then recurse
+        result = scan(table2struct(r, 'ToScalar', true));  % <-- NEW
     elseif isord(r)
         result = scan_ord(r);
     elseif isstruct(r)
-        result = scan_struct(r);                
+        result = scan_struct(r);
     elseif isnumeric(r)
         result = scan_numeric(r);
     elseif islogical(r)
         result = scan_logical(r);
-    elseif isa(r,'DateTime')
-        result = scan_datetime(r);
+    elseif isdatetime(r) || isa(r,'DateTime')
+        result = scan_datetime(r);              % support modern datetime
+    elseif isduration(r) || iscalendarduration(r)
+        result = scan_duration(r);              % <-- NEW
     else
         error(['Cannot handle type: ' class(r)]);
     end
@@ -320,13 +327,51 @@ function result = scan_struct(r)
         result.put(key,scan(val));
     end;
 end
+%--------------------------------------------------------------------------
+%
+%
 
-
-
-
-
-
-
+function result = scan_categorical(r)
+    % Convert categorical to strings for YAML
+    if isempty(r)
+        result = java.util.ArrayList();
+        return;
+    end
+    if isscalar(r)
+        if isundefined(r)
+            s = '';
+        else
+            s = char(string(r));
+        end
+        result = java.lang.String(s);
+    else
+        result = java.util.ArrayList();
+        c = cellstr(r);                         % cell array of char
+        for ii = 1:numel(c)
+            s = c{ii};
+            if strcmp(s,'<undefined>'), s = ''; end
+            result.add(java.lang.String(s));
+        end
+    end
+end
+%--------------------------------------------------------------------------
+%
+%
+function result = scan_duration(r)
+    % Serialize duration/calendarDuration as text (e.g., '00:00:01')
+    if isempty(r)
+        result = java.util.ArrayList();
+        return;
+    end
+    if isscalar(r)
+        result = java.lang.String(char(r));
+    else
+        result = java.util.ArrayList();
+        for ii = 1:numel(r)
+            result.add(java.lang.String(char(r(ii))));
+        end
+    end
+end
 
 
 

@@ -44,7 +44,7 @@ switch Root_Directory
                 end
             case 'paxpoggi'
         inputfolder_base='/Volumes/Womelsdorf Lab'; 
-        % Folder where 'DATA_neural' is accessed from your computer
+        % Folder where 'DAT_neural' is accessed from your computer
         outputfolder_base='/Volumes/Extreme SSD/Womelsdorf/Preprocessed Data';
         % Folder where you would like all of the processing to go
         temporaryfolder_base= '/Volumes/Extreme SSD/Womelsdorf/Preprocessed Data';   
@@ -55,17 +55,15 @@ switch Root_Directory
         inputfolder_base='/data';
         outputfolder_base=['/data/users/',Current_User];
         temporaryfolder_base=['/data/users/',Current_User];
-    % case {"accre","panfs"}
-    %     Current_System="ACCRE";
-    %     inputfolder_base=['/home/',Current_User];
-    %     outputfolder_base=['/home/',Current_User];
-    %     temporaryfolder_base=['/data/womelsdorf_lab/',Current_User];
-    %     % temporaryfolder_base=['/nobackup/user/',Current_User];
+    case {"accre","panfs"}
+        Current_System="ACCRE";
+        inputfolder_base=['/home/',Current_User];
+        outputfolder_base=['/home/',Current_User];
+        temporaryfolder_base=['/data/womelsdorf_lab/',Current_User];
+        % temporaryfolder_base=['/nobackup/user/',Current_User];
     case {'accre','panfs'}
-        Current_System = 'ACCRE';
-        inputfolder_base='/data/womelsdorf_lab/poggigp';
-        outputfolder_base='/data/womelsdorf_lab/poggigp/processed_data';
-        temporaryfolder_base='/data/womelsdorf_lab/poggigp/processed_data';
+        Current_System = 'ACCRE'
+        inputfolder_base=['/data/womelsdorf_lab/poggigp']
 end
 
 end

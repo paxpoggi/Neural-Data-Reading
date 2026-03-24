@@ -7,6 +7,8 @@ isfunction=exist('varargin','var');
 
 if isfunction
 inputfolder = CheckVararginPairs('inputfolder', '', varargin{:});
+outdatadir = CheckVararginPairs('outdatadir', '', varargin{:});
+
 if isempty(inputfolder)
     inputfolder = uigetdir(['/Volumes/','Womelsdorf Lab','/DATA_neural'], 'Choose the input data folder');
 end
@@ -19,6 +21,23 @@ end
 [inputfolder_dir,SessionName,~]=fileparts(inputfolder);
 [~,ExperimentName,~]=fileparts(inputfolder_dir);
 
+%% Edit for if input folder is not the same as outdatadir
+% Start from the outdatadir root
+% outdir_contents = dir(outdatadir);
+% subfolders = outdir_contents([outdir_contents.isdir]);
+% subfolders = subfolders(~ismember({subfolders.name},{'.','..'}));
+% 
+% subfolderNames = {subfolders.name}; % Extract names of subfolders
+% ExperimentName = subfolderNames{1}; % Assuming the first subfolder is the ExperimentName
+% 
+% session_dir = dir(fullfile(outdatadir, ExperimentName));
+% session_dir = session_dir([session_dir.isdir]);
+% session_dir_children_names = session_dir(~ismember({session_dir.name},{'.','..'}));
+% 
+% SessionName = session_dir_children_names(1).name; 
+
+% disp(ExperimentName)
+% disp(SessionName)
 
 % This gets the ouput folder from varargin. Use the name value pair of
 % 'outdatadir'. If nothing is selected it will prompt you to select a
@@ -28,6 +47,7 @@ end
 % session that you have chosen in the input folder
 if isfunction
 outdatadir = CheckVararginPairs('outdatadir', '', varargin{:});
+
 if isempty(outdatadir)
     outdatadir = uigetdir(['/Volumes/gerritcg''','s home/Data_Neural_gerritcg'], 'Choose the output data folder');
 end

@@ -48,8 +48,8 @@ end
 Window_Before_Data = 1.5;
 Window_After_Data = 1.5;
 
-Window_Before_Baseline = 0;
-Window_After_Baseline = 0.5;
+Window_Before_Baseline = 0.15;
+Window_After_Baseline = 0.4;
 %% PreProcessing Parameters
 cfg_PreProcessing = PARAMETERS_cgg_proc_NeuralDataPreparation('SessionName','none');
 switch Activity_Type

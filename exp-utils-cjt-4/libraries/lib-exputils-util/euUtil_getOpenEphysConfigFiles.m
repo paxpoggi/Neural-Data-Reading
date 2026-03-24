@@ -29,6 +29,12 @@ if isdir(topdir)
   configfiles = [ fullnames strcat(fpaths, filesep, fnames) ];
   configfiles = unique(configfiles);
 
+  [fnames fpaths ] = nlIO_searchForFile(topdir, '*Settings*');
+  fullnames = strcat(fpaths, filesep, fnames);
+  [ fnames fpaths ] = nlIO_searchForFile(topdir, '*settings*');
+  configfiles = [ fullnames strcat(fpaths, filesep, fnames) ];
+  configfiles = unique(configfiles);
+
 
   [ fnames fpaths ] = nlIO_searchForFile(topdir, '*Mapping*');
   fullnames = strcat(fpaths, filesep, fnames);
