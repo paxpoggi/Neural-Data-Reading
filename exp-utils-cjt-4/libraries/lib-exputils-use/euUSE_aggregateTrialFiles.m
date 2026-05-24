@@ -17,6 +17,8 @@ function tabdata = euUSE_aggregateTrialFiles(filepattern, sortcolumn)
 tabdata = table();
 
 flist= dir(filepattern);
+% Skip macOS resource-fork files (._filename) created when copying from Mac.
+flist = flist(~startsWith({flist.name}, '._'));
 
 if ~isempty(flist)
   % FIXME - traversing in unsorted order.

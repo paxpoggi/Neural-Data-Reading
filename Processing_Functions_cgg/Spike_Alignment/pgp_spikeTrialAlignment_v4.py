@@ -23,8 +23,10 @@ Required per probe under sorted_root:
   <session>_prbX/KS4_OUTPUT/spike_times.npy
   <session>_prbX/KS4_OUTPUT/spike_clusters.npy
   <session>_prbX/KS4_OUTPUT/autoSortMetrics/clusterMetrics/cluster_metrics_with_labels.csv
+    OR (fallback)
+  <session>_prbX/KS4_OUTPUT/autoSortMetrics/clusterStability/cluster_stability.xlsx
 
-If a probe is missing cluster_metrics_with_labels.csv, that probe is skipped.
+If a probe is missing both cluster_metrics_with_labels.csv and cluster_stability.xlsx, that probe is skipped.
 
 JSON per session should include:
   session, processed_session_root, sorted_root, align_mat, baseline_align_mat
@@ -53,26 +55,30 @@ def load_offset_c(offset_mat: Path) -> float:
     return float(d["c"])
 
 
-def read_good_clusters(metrics_csv: Path, qualities=(4, 5)) -> np.ndarray:
+def read_good_clusters(metrics_path: Path, qualities=(4, 5)) -> np.ndarray:
     """
-    Returns unique good cluster IDs (int64). Raises if CSV exists but is malformed.
+    Returns unique good cluster IDs (int64). Accepts CSV or xlsx.
+    Raises if file exists but is malformed.
     """
-    # handle annoying quoting issues robustly
-    try:
-        df = pd.read_csv(metrics_csv)
-    except Exception:
-        raw = metrics_csv.read_text().splitlines()
-        raw2 = [re.sub(r'^"(.*)"$', r"\1", line) for line in raw]
-        tmp = metrics_csv.with_name(metrics_csv.stem + "_CLEAN_tmp.csv")
-        tmp.write_text("\n".join(raw2))
-        df = pd.read_csv(tmp)
+    if metrics_path.suffix.lower() in (".xlsx", ".xls"):
+        df = pd.read_excel(metrics_path)
+    else:
+        # handle annoying quoting issues robustly
         try:
-            tmp.unlink()
+            df = pd.read_csv(metrics_path)
         except Exception:
-            pass
+            raw = metrics_path.read_text().splitlines()
+            raw2 = [re.sub(r'^"(.*)"$', r"\1", line) for line in raw]
+            tmp = metrics_path.with_name(metrics_path.stem + "_CLEAN_tmp.csv")
+            tmp.write_text("\n".join(raw2))
+            df = pd.read_csv(tmp)
+            try:
+                tmp.unlink()
+            except Exception:
+                pass
 
     if "quality" not in df.columns or "cluster_id" not in df.columns:
-        raise KeyError(f"metrics CSV missing required columns. Have: {list(df.columns)}")
+        raise KeyError(f"metrics file missing required columns. Have: {list(df.columns)}")
 
     good = df.loc[df["quality"].isin(list(qualities)), "cluster_id"].to_numpy()
     return np.unique(good.astype(np.int64))
@@ -308,11 +314,17 @@ def process_one_session(
         print(f"[probe] {probe_name}", flush=True)
 
         metrics_csv = ks_dir / "autoSortMetrics" / "clusterMetrics" / "cluster_metrics_with_labels.csv"
-        if not metrics_csv.exists():
+        metrics_xlsx = ks_dir / "autoSortMetrics" / "clusterStability" / "cluster_stability.xlsx"
+        if metrics_csv.exists():
+            metrics_path = metrics_csv
+        elif metrics_xlsx.exists():
+            print(f"  [info] cluster_metrics_with_labels.csv not found, falling back to cluster_stability.xlsx", flush=True)
+            metrics_path = metrics_xlsx
+        else:
             print(f"  [warn] missing cluster metrics -> skipping probe: {metrics_csv}", flush=True)
             continue
 
-        good_cids = read_good_clusters(metrics_csv, qualities=qualities)
+        good_cids = read_good_clusters(metrics_path, qualities=qualities)
         print(f"  good clusters: {len(good_cids)}", flush=True)
 
         if good_cids.size == 0:

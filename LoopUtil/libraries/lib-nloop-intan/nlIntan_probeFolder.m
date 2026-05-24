@@ -33,6 +33,9 @@ if isdir(indir)
   scratchrec = { scratchrec.name };
   scratchstim = dir([ indir '/*.rhs' ]);
   scratchstim = { scratchstim.name };
+  % Skip macOS resource-fork files (._filename) created when copying from Mac.
+  scratchrec  = scratchrec(~startsWith(scratchrec,  '._'));
+  scratchstim = scratchstim(~startsWith(scratchstim, '._'));
 
   metafilelist = [ scratchrec scratchstim ];
   metafilelist = strcat([ indir filesep ], metafilelist);

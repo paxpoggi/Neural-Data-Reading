@@ -39,7 +39,9 @@ end
 
 % --- parameters (to get Fs and event/loc) ---
 cfg_param = PARAMETERS_cgg_procFullTrialPreparation_v2(Epoch);
-Fs = 30000;
+% ---- Update RECORDING_FS here if the recording system changes ----
+RECORDING_FS = 30000;  % Hz — Intan Rec. Controller (FLToken sessions)
+Fs = RECORDING_FS;
 
 switch lower(string(which))
     case "data"

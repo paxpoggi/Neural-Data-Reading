@@ -40,14 +40,14 @@ end
 % sorted/continuous_{session_name}/{session_name}_prb{num}/KS4_OUTPUT
 % spikeFilePath specifies where the spike alignment function is
 json_out = fullfile(outdatadir, 'ALL_SESSIONS_spike_pipeline.json');
-sorted_root_base = '/panfs/accrepfs.vampire/data/womelsdorf_lab/M1VU595_ACC_PFC_CD/sorted';
+sorted_root_base = '/data/womelsdorf_lab/kazezew/Old_Dataset_Related/FLToken_Sorted/sorted';
 
 pgp_exportCfgToJson( ...
   json_out, ...
   'sorted_root_base', sorted_root_base, ...
   'Epoch', Epoch);
 
-spikeFilePath = '/panfs/accrepfs.vampire/home/poggigp/Womelsdorf Lab/Spike_Alignment/pgp_spikeTrialAlignment_v4.py';
+spikeFilePath = '/panfs/accrepfs.vampire/data/womelsdorf_lab/kazezew/Old_Dataset_Related/Thilo_Research_Work/Processing_Functions_cgg/Spike_Alignment/pgp_spikeTrialAlignment_v4.py';
 
 %% ----FixME - make the argument inputs programmatic not hard coded---
 % ---- Python: run spike alignment on everything in JSON ----
@@ -66,7 +66,7 @@ spikeFilePath = '/panfs/accrepfs.vampire/home/poggigp/Womelsdorf Lab/Spike_Align
 % souce ~/venvs/spike_align_v3/bin/activate
 % also, add to path Spike_Alignment folder
 
-pybin = '/home/poggigp/venvs/spike_align_v3/bin/python';
+pybin = '/data/womelsdorf_lab/kazezew/Old_Dataset_Related/venvs/spike_align_v3/bin/python';
 % 
 cmd = sprintf([ ...
     'bash -c ''unset LD_LIBRARY_PATH; ' ...

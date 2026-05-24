@@ -26,6 +26,11 @@ for didx = 1:length(dirlist)
   thisentry = dirlist(didx);
   thisfullname = [ thisentry.folder filesep thisentry.name ];
 
+  % Skip macOS resource-fork files (._filename) created when copying from Mac.
+  if startsWith(thisentry.name, '._')
+    continue;
+  end
+
   if ~isdir(thisfullname)
     fnames_found = [ fnames_found { thisentry.name } ];
     paths_found = [ paths_found { thisentry.folder } ];

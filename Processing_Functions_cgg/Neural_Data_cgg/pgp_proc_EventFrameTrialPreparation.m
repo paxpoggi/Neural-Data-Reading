@@ -90,11 +90,11 @@ need_frame = ~exist(outdatafile_FrameInformation,'file');
 need_each  = ~exist(outdatafile_EventInformation_Each,'file');
 need_cat   = ~exist(outdatafile_EventInformation_Concatenated,'file');
 need_trl   = ~exist(outdatafile_TrialInformation,'file') || ~exist(outdatafile_TrialInformation_Table,'file');
-timeDir = fullfile(outdatadir_TimeInformation, 'Spike');
+timeDir = fullfile(outdatadir_TimeInformation, 'MUA');
 if ~exist(timeDir,'dir')
     need_time = true;
 else
-    timeFiles = dir(fullfile(timeDir, 'Spike_Trial_*_Time.mat'));
+    timeFiles = dir(fullfile(timeDir, 'MUA_Trial_*_Time.mat'));
     need_time = isempty(timeFiles);
 end
 if ~need_frame && ~need_each && ~need_cat && ~need_trl && ~need_time
@@ -149,6 +149,11 @@ if have_openephys
         error('No OpenEphys recording folder with non-empty TTL events found.');
     end
 else
+    if isempty(folders_intanrec)
+        error(['pgp_proc_EventFrameTrialPreparation: no recording folder found in "%s".\n' ...
+               'Expected structure.oebin (OpenEphys) or info.rhd (Intan) — ' ...
+               'check that the session data was uploaded.'], inputfolder);
+    end
     folder_record = folders_intanrec{1};
 end
 
@@ -161,9 +166,26 @@ end
 folder_game = folders_unity{1};
 
 %% Headers
-rechdr = ft_read_header(folder_record, 'headerformat', 'nlFT_readHeader');
+% ---- Update RECORDING_FS here if the recording system changes ----
+RECORDING_FS = 30000;  % Hz — Intan Rec. Controller (FLToken sessions)
+% continuous.dat was not uploaded to ACCRE (too large); only rechdr.Fs is used
+% downstream. Restore the original calls below if continuous.dat becomes available.
+% rechdr = ft_read_header(folder_record, 'headerformat', 'nlFT_readHeader');
+% if have_stim
+%     stimhdr = ft_read_header(folder_stim, 'headerformat', 'nlFT_readHeader');
+% end
+% nSamples computed from timestamps.npy header (one entry per sample, fast —
+% reads only the NPY header, no data loading). Falls back to Inf if not found.
+tslist = dir(fullfile(folder_record, 'continuous', '*', 'timestamps.npy'));
+if ~isempty(tslist)
+    ts_shape = readNPYheader(fullfile(tslist(1).folder, tslist(1).name));
+    nSamples_rec = ts_shape(1);
+else
+    nSamples_rec = Inf;
+end
+rechdr = struct('Fs', RECORDING_FS, 'nSamples', nSamples_rec);
 if have_stim
-    stimhdr = ft_read_header(folder_stim, 'headerformat', 'nlFT_readHeader');
+    stimhdr = struct('Fs', RECORDING_FS);
 end
 
 %% If we need any of frame/events/trials/time, we must (re)build alignment
@@ -345,7 +367,8 @@ end
 % time = (offsetSamp : offsetSamp + (N-1)) / Fs
 
 if need_time
-    Activity_Type = 'Spike';  % match the old naming convention
+    % Activity_Type = 'Spike';  % old naming convention — changed to 'MUA' to match
+    Activity_Type = 'MUA';  % must match PARAMETERS_cgg_procFullTrialPreparation_v2
     outdatadir_TimeInformation_Type = fullfile(outdatadir_TimeInformation, Activity_Type);
     if ~exist(outdatadir_TimeInformation_Type, 'dir')
         mkdir(outdatadir_TimeInformation_Type);

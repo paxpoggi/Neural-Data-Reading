@@ -63,9 +63,9 @@ switch Root_Directory
     %     % temporaryfolder_base=['/nobackup/user/',Current_User];
     case {'accre','panfs'}
         Current_System = 'ACCRE';
-        inputfolder_base='/data/womelsdorf_lab/poggigp';
-        outputfolder_base='/data/womelsdorf_lab/poggigp/processed_data';
-        temporaryfolder_base='/data/womelsdorf_lab/poggigp/processed_data';
+        inputfolder_base='/data/womelsdorf_lab/kazezew/Old_Dataset_Related/FLToken_BHV';
+        outputfolder_base='/data/womelsdorf_lab/kazezew/Old_Dataset_Related/processed_data';
+        temporaryfolder_base='/data/womelsdorf_lab/kazezew/Old_Dataset_Related/processed_data';
 end
 
 end

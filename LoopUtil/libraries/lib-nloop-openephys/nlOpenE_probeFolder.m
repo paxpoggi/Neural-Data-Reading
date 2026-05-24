@@ -52,8 +52,14 @@ if isfile(filemonolithic)
 
     % Open the data file without loading it into memory, to get header data.
     % Also check to see if data was actually recorded (nonzero sample count).
-    thisdata = ...
-      load_open_ephys_binary(filemonolithic, 'continuous', bidx, 'mmap');
+    % continuous.dat may be absent (e.g., not uploaded to ACCRE); skip gracefully
+    % so that event bank processing (phase 2, below) still runs.
+    try
+      thisdata = ...
+        load_open_ephys_binary(filemonolithic, 'continuous', bidx, 'mmap');
+    catch
+      continue;
+    end
     thisdataheader = thisdata.Header;
     thisdatasize = length(thisdata.Timestamps);
     thisdatatimetype = class(thisdata.Timestamps);
