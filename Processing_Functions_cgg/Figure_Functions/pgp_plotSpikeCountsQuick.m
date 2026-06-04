@@ -18,7 +18,7 @@ spike_counts_dir = '/data/womelsdorf_lab/kazezew/Old_Dataset_Related/processed_d
 unit_idx = 1;
 
 %% ---- Load ----
-pattern  = fullfile(spike_counts_dir, '**', [session_name '*SpikeCounts*.mat']);
+pattern  = fullfile(spike_counts_dir, '**', [session_name '*SpikeCounts_Stable.mat']);
 flist    = dir(pattern);
 assert(~isempty(flist), 'No SpikeCounts.mat found for session: %s', session_name);
 

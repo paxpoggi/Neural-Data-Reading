@@ -47,7 +47,7 @@ pgp_exportCfgToJson( ...
   'sorted_root_base', sorted_root_base, ...
   'Epoch', Epoch);
 
-spikeFilePath = '/panfs/accrepfs.vampire/data/womelsdorf_lab/kazezew/Old_Dataset_Related/Thilo_Research_Work/Processing_Functions_cgg/Spike_Alignment/pgp_spikeTrialAlignment_v4.py';
+spikeFilePath = '/panfs/accrepfs.vampire/data/womelsdorf_lab/kazezew/Old_Dataset_Related/Thilo_Research_Work/Processing_Functions_cgg/Spike_Alignment/pgp_spikeTrialAlignment_v5_stability.py';
 
 %% ----FixME - make the argument inputs programmatic not hard coded---
 % ---- Python: run spike alignment on everything in JSON ----
