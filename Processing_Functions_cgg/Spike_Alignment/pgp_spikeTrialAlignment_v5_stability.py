@@ -49,7 +49,7 @@ import argparse
 import json
 import re
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Set, Tuple
 
 import numpy as np
 import pandas as pd
@@ -273,6 +273,76 @@ def apply_stability_nan_mask(
     )
 
 
+def load_valid_trial_ids(
+    processed_session_root: Path,
+    session: str,
+    trial_duration_max: float = 10.0,
+) -> Optional[Set[int]]:
+    """
+    Load TrialVariables_{session}.mat and return valid (non-aborted, not too long) trial IDs.
+
+    Mirrors the MUA pipeline criterion from cgg_getSeparateTrialsByCriteria_v2 /
+    cgg_getTrialCriteriaBaseline:
+        AbortCode == 0  AND  TrialTime < trial_duration_max
+
+    The TrialVariables file is a MATLAB v7.3 HDF5 file where each field is stored
+    as an array of object references that must be dereferenced individually.
+
+    Returns None if the file is absent or unreadable (caller warns and uses all trials).
+    """
+    tv_path = processed_session_root / "Trial_Information" / f"TrialVariables_{session}.mat"
+    if not tv_path.exists():
+        print(
+            f"[warn] TrialVariables not found at {tv_path}; "
+            "skipping aborted-trial filter.",
+            flush=True,
+        )
+        return None
+
+    try:
+        import h5py
+
+        with h5py.File(tv_path.as_posix(), "r") as f:
+            if "trialVariables" not in f:
+                print(
+                    f"[warn] 'trialVariables' key missing in {tv_path}; "
+                    "skipping aborted-trial filter.",
+                    flush=True,
+                )
+                return None
+
+            tv = f["trialVariables"]
+
+            def _deref(col: str) -> np.ndarray:
+                """Dereference a column of HDF5 object references → 1-D float array."""
+                return np.array([f[r][()].flat[0] for r in tv[col][:].flatten()])
+
+            abort_vals = _deref("AbortCode").astype(float)
+            ttime_vals = _deref("TrialTime").astype(float)
+            tnum_vals  = _deref("TrialNumber").astype(int)
+
+    except Exception as exc:
+        print(
+            f"[warn] Failed to read TrialVariables from {tv_path} ({exc}); "
+            "skipping aborted-trial filter.",
+            flush=True,
+        )
+        return None
+
+    valid_mask = (abort_vals == 0) & (ttime_vals < trial_duration_max)
+    valid_ids: Set[int] = {int(t) for t in tnum_vals[valid_mask]}
+
+    n_total   = len(abort_vals)
+    n_valid   = len(valid_ids)
+    n_removed = n_total - n_valid
+    print(
+        f"[info] TrialVariables: {n_total} total, {n_valid} valid "
+        f"(AbortCode==0 & TrialTime<{trial_duration_max}s), {n_removed} excluded",
+        flush=True,
+    )
+    return valid_ids
+
+
 def load_ks_spikes(ks_dir: Path) -> Tuple[np.ndarray, np.ndarray]:
     st = np.load(ks_dir / "spike_times.npy").astype(np.int64).reshape(-1)
     sc = np.load(ks_dir / "spike_clusters.npy").astype(np.int64).reshape(-1)
@@ -437,6 +507,7 @@ def process_one_session(
     win_after_base: float,
     qualities: Tuple[int, ...],
     allow_missing_stability: bool,
+    trial_duration_max: float = 10.0,
 ) -> Path:
     offset_mat = processed_session_root / "Event_Information" / f"recTime_offset_{session}.mat"
     align_mat = align_mat_path
@@ -476,6 +547,22 @@ def process_one_session(
 
     if trial_ids.size == 0:
         raise RuntimeError("[FAIL] No trials remain after intersecting DATA and BASE Salign.")
+
+    # Filter aborted / too-long trials using TrialVariables (mirrors MUA pipeline).
+    valid_ids = load_valid_trial_ids(processed_session_root, session, trial_duration_max)
+    if valid_ids is not None:
+        before = trial_ids.size
+        trial_ids = trial_ids[np.isin(trial_ids, np.array(sorted(valid_ids), dtype=np.int64))]
+        print(
+            f"[info] After aborted-trial filter: {before} -> {trial_ids.size} trials "
+            f"(removed {before - trial_ids.size})",
+            flush=True,
+        )
+        if trial_ids.size == 0:
+            raise RuntimeError(
+                "[FAIL] No trials remain after aborted-trial filtering. "
+                "Check TrialVariables or --trial_duration_max."
+            )
 
     _assert_align_map_complete(trial_ids, align_samp_by_trial, "DATA")
     _assert_align_map_complete(trial_ids, base_samp_by_trial, "BASE")
@@ -847,6 +934,12 @@ Example runs:
     ap.add_argument("--allow_missing_stability", action="store_true",
                     help="If set, missing cluster_stability.xlsx files are allowed and all kept units are treated as stable.")
 
+    ap.add_argument("--trial_duration_max", type=float, default=10.0,
+                    help="Maximum trial duration in seconds (default 10.0). Trials with "
+                         "TrialTime >= this value are excluded, matching the MUA pipeline "
+                         "cgg_getTrialCriteriaBaseline criterion. Requires TrialVariables_<session>.mat "
+                         "to exist under processed_session_root/Trial_Information/.")
+
     ap.add_argument("--no_skip_existing", action="store_true",
                     help="Process even if output .mat already exists")
 
@@ -920,6 +1013,7 @@ Example runs:
             win_after_base=win_after_base,
             qualities=qualities,
             allow_missing_stability=bool(args.allow_missing_stability),
+            trial_duration_max=float(args.trial_duration_max),
         )
 
     print("\n[done] all sessions processed.", flush=True)
